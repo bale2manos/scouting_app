@@ -32,33 +32,54 @@ class GoogleDriveClient:
             st.error("❌ Google Drive API no está disponible. Instala las dependencias necesarias.")
             return
             
-        if not self.credentials_path.exists():
-            st.error(f"❌ No se encontraron las credenciales de Google Drive en: {self.credentials_path}")
-            return
-            
         self._authenticate()
     
     def _authenticate(self):
         """Autentica con Google Drive usando credenciales de cuenta de servicio"""
         try:
-            # Definir el alcance necesario para Google Drive
             SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
             
-            # Cargar credenciales desde el archivo JSON
-            credentials = service_account.Credentials.from_service_account_file(
-                str(self.credentials_path), 
-                scopes=SCOPES
-            )
+            # Priorizar Streamlit Secrets
+            if hasattr(st, 'secrets') and "google_credentials" in st.secrets:
+                try:
+                    credentials_info = dict(st.secrets["google_credentials"])
+                    credentials = service_account.Credentials.from_service_account_info(
+                        credentials_info, 
+                        scopes=SCOPES
+                    )
+                    st.toast("🔑 Usando credenciales desde Streamlit Secrets", icon="✅")
+                except Exception as e:
+                    st.error(f"❌ Error al cargar credenciales desde Secrets: {str(e)}")
+                    return
+                
+            elif self.credentials_path.exists():
+                try:
+                    credentials = service_account.Credentials.from_service_account_file(
+                        str(self.credentials_path), 
+                        scopes=SCOPES
+                    )
+                    st.toast("🔑 Usando credenciales desde archivo local", icon="✅")
+                except Exception as e:
+                    st.error(f"❌ Error al cargar credenciales desde archivo: {str(e)}")
+                    return
+            else:
+                st.error("❌ No se encontraron credenciales de Google Drive")
+                st.info("💡 Configura las credenciales en Streamlit Secrets o agrega el archivo credentials/google_drive_credentials.json")
+                return
             
-            # Construir el servicio de Google Drive
+            # Construir el servicio
             self.service = build('drive', 'v3', credentials=credentials)
-            self._authenticated = True
             
-            # Verificar que la autenticación funciona
-            self.service.about().get(fields="user").execute()
+            # Verificar que funciona
+            about = self.service.about().get(fields="user").execute()
+            user_email = about.get('user', {}).get('emailAddress', 'Usuario')
+            
+            self._authenticated = True
+            st.toast(f"✅ Conectado a Google Drive como: {user_email}", icon="☁️")
             
         except Exception as e:
             st.error(f"❌ Error al autenticar con Google Drive: {str(e)}")
+            st.info("💡 Verifica que las credenciales sean válidas y tengan permisos de Google Drive")
             self._authenticated = False
     
     def is_authenticated(self) -> bool:
