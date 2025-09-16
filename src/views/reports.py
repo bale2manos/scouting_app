@@ -58,12 +58,18 @@ def view_jugador_informe():
     
     st.markdown(f"## 🏀 {player_label(player.get('number', 0), player.get('name', 'Nombre'), player.get('surnames', 'Apellidos'))}")
     
-    # Mostrar imagen PNG del informe con fallback
-    informe_png_path = PLAYER_REPORTS_DIR / f"{player.get('slug', 'unknown')}.png"
+    # Mostrar imagen PNG del informe desde Google Drive
+    player_slug = player.get('slug', 'unknown')
+    image_filename = f"{player_slug}.png"
+    
+    # Intentar obtener la imagen desde Google Drive
+    from ..data.drive_loader import get_player_image_path
+    
+    informe_png_path = get_player_image_path(image_filename)
     image_to_download = None
     
     # Intentar cargar la imagen del informe
-    if informe_png_path.exists():
+    if informe_png_path and informe_png_path.exists():
         try:
             st.image(str(informe_png_path), use_container_width=True)
             image_to_download = informe_png_path
@@ -73,7 +79,16 @@ def view_jugador_informe():
             _show_generic_image()
             image_to_download = _get_generic_image_path()
     else:
-        st.warning(f"No se encontró la imagen del informe: {informe_png_path.name}")
+        st.warning(f"No se encontró la imagen del informe: {image_filename}")
+        st.info("💡 Verificando descarga desde Google Drive...")
+        
+        # Intentar forzar descarga
+        from ..data.drive_loader import force_sync
+        if st.button("🔄 Reintentar descarga", key="retry_download"):
+            with st.spinner("Descargando imagen..."):
+                force_sync()
+                st.rerun()
+        
         # Usar imagen genérica como fallback
         _show_generic_image()
         image_to_download = _get_generic_image_path()

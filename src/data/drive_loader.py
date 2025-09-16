@@ -356,10 +356,35 @@ def auto_sync_on_load():
     """Sincronización automática al cargar la aplicación"""
     if 'drive_synced' not in st.session_state:
         loader = get_drive_loader()
-        with st.spinner("🔄 Sincronizando con Google Drive..."):
-            result = loader.sync_team_data(force_refresh=False)
-            st.session_state['drive_synced'] = result['success']
-            st.session_state['sync_timestamp'] = time.time()
+        
+        # En producción (Streamlit Cloud), verificar si hay cache antes de sincronizar
+        is_production = not Path("credentials/google_drive_credentials.json").exists()
+        
+        if is_production:
+            # En producción, siempre sincronizar la primera vez
+            st.info("☁️ Sincronizando datos desde Google Drive...")
+            with st.spinner("🔄 Descargando archivos..."):
+                result = loader.sync_team_data(force_refresh=True)
+        else:
+            # En desarrollo, usar cache si existe
+            with st.spinner("🔄 Sincronizando con Google Drive..."):
+                result = loader.sync_team_data(force_refresh=False)
+        
+        st.session_state['drive_synced'] = result['success']
+        st.session_state['sync_timestamp'] = time.time()
+        
+        if result['success']:
+            # Mostrar información de sincronización
+            team_report = result.get('team_report')
+            player_images = result.get('player_images', {})
+            
+            if team_report:
+                st.success(f"✅ Informe del equipo sincronizado")
+            
+            if player_images:
+                st.success(f"✅ {len(player_images)} imágenes de jugadores sincronizadas")
+        else:
+            st.error("❌ Error en la sincronización inicial")
 
 
 def load_players() -> List[Dict[str, Any]]:
@@ -577,16 +602,29 @@ def get_player_image_path(player_name: str) -> Optional[Path]:
         
         loader = get_drive_loader()
         
+        # Normalizar nombre del archivo
+        normalized_name = player_name.lower()
+        
         # Obtener imágenes desde cache
         cached_images = loader.get_cached_player_images()
         
-        if player_name in cached_images:
-            return cached_images[player_name]
+        if normalized_name in cached_images:
+            return cached_images[normalized_name]
         
-        # Si no está en cache, intentar descargar todas las imágenes
-        downloaded_images = loader.download_player_images(force_refresh=False)
+        # Si no está en cache, intentar descargar TODAS las imágenes
+        st.info(f"🔄 Descargando imagen: {player_name}")
+        downloaded_images = loader.download_player_images(force_refresh=True)
         
-        return downloaded_images.get(player_name)
+        if normalized_name in downloaded_images:
+            return downloaded_images[normalized_name]
+        
+        # Si aún no se encuentra, mostrar información de debugging
+        st.warning(f"❌ No se encontró la imagen: {normalized_name}")
+        st.info("📋 Imágenes disponibles:")
+        for available_name in downloaded_images.keys():
+            st.write(f"• {available_name}")
+        
+        return None
         
     except Exception as e:
         st.error(f"❌ Error obteniendo imagen del jugador {player_name}: {str(e)}")
