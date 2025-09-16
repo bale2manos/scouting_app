@@ -11,10 +11,10 @@ from src.views import (
     view_team, 
     view_equipo_informe,
     view_jugador_informe,
-    view_players,
-    view_loading,
-    view_error_loading
+    view_players
 )
+# Import loading views directly to avoid caching issues
+# from src.views.loading import view_loading, view_error_loading
 from src.utils import set_route
 from src.data.drive_loader import auto_sync_on_load, debug_player_files, force_sync
 
@@ -23,22 +23,9 @@ def main():
     """Función principal de la aplicación"""
     st.set_page_config(page_title="Scouting Hub", layout="wide")
     
-    # Verificar si ya se ha sincronizado
-    if 'drive_synced' not in st.session_state:
-        # Mostrar pantalla de carga durante la sincronización inicial
-        view_loading()
-        
-        # Sincronización automática con Google Drive al cargar
-        try:
-            auto_sync_on_load()
-            # Si llegamos aquí, la sincronización fue exitosa, recargar
-            st.rerun()
-        except Exception as e:
-            # Mostrar error si falla la sincronización
-            view_error_loading("Error al conectar con Google Drive")
-            return
+    # Sincronización automática con Google Drive al cargar
+    auto_sync_on_load()
     
-    # Si ya está sincronizado, mostrar la aplicación normal
     # Router principal
     route = st.session_state.get("route", "home")
 
@@ -52,8 +39,6 @@ def main():
         view_players()
     elif route == "jugador_informe":
         view_jugador_informe()
-    elif route == "loading":
-        view_loading()
     elif route == "debug":
         # Página temporal de debugging
         st.title("Archivos de Jugadores")

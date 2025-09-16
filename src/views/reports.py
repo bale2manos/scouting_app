@@ -8,7 +8,7 @@ from ..components import header_bar
 from ..utils import embed_pdf_local, download_button_for_pdf, player_label, set_route
 from ..config import TEAM_SLUG, PLAYER_REPORTS_DIR, GENERIC_USER_IMAGE
 from ..data.drive_loader import load_players, get_team_report_path
-from .loading import view_loading_with_progress
+# from .loading import view_loading_with_progress  # Commented out to avoid import issues
 
 
 def view_equipo_informe():

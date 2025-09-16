@@ -15,7 +15,7 @@ from ..config import (
     GENERIC_USER_IMAGE
 )
 from ..data.drive_loader import load_players, get_player_image_path
-from .loading import view_loading_with_progress
+# from .loading import view_loading_with_progress  # Commented out to avoid import issues
 
 
 def view_players():

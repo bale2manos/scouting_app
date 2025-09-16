@@ -356,16 +356,18 @@ def auto_sync_on_load():
         
         if is_production:
             # En producción, siempre sincronizar la primera vez
-            result = loader.sync_team_data(force_refresh=True)
+            with st.spinner("🔄 Sincronizando datos desde Google Drive..."):
+                result = loader.sync_team_data(force_refresh=True)
         else:
             # En desarrollo, usar cache si existe
-            result = loader.sync_team_data(force_refresh=False)
+            with st.spinner("🔄 Sincronizando con Google Drive..."):
+                result = loader.sync_team_data(force_refresh=False)
         
         st.session_state['drive_synced'] = result['success']
         st.session_state['sync_timestamp'] = time.time()
         
         if not result['success']:
-            raise Exception("Error en la sincronización inicial")
+            st.error("❌ Error en la sincronización inicial")
 
 
 def load_players() -> List[Dict[str, Any]]:
