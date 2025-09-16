@@ -224,16 +224,18 @@ class DriveDataLoader:
         
         for image in images:
             image_name = image['name']
-            cached_image = players_cache_dir / image_name
+            # Normalizar nombre del archivo a minúsculas para consistencia
+            normalized_name = image_name.lower()
+            cached_image = players_cache_dir / normalized_name
             
             # Verificar si usar cache
             if not force_refresh and self.is_cache_valid(cached_image):
-                downloaded_images[image_name] = cached_image
+                downloaded_images[normalized_name] = cached_image
                 continue
             
-            # Descargar imagen
+            # Descargar imagen con nombre normalizado
             if self.drive_client.download_file(image['id'], cached_image):
-                downloaded_images[image_name] = cached_image
+                downloaded_images[normalized_name] = cached_image
         
         return downloaded_images
     
