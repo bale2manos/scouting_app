@@ -45,14 +45,25 @@ def view_players():
                 # Crear contenido visual del jugador
                 with st.container():
                     # Prioridad de imágenes:
-                    # 1. Imagen genérica local (siempre disponible)
-                    # 2. NO usar URLs externas que puedan fallar
+                    # 1. Imagen de URL del Excel
+                    # 2. Imagen genérica local
                     
-                    # Mostrar imagen genérica directamente - más confiable
-                    if GENERIC_USER_IMAGE.exists():
-                        st.image(str(GENERIC_USER_IMAGE), use_container_width=True)
-                    else:
-                        st.markdown("🏀", help="Imagen no disponible")
+                    image_displayed = False
+                    
+                    # 1. Intentar imagen URL del Excel
+                    if p.get('image_url'):
+                        try:
+                            st.image(p['image_url'], use_container_width=True)
+                            image_displayed = True
+                        except:
+                            pass  # Si falla la URL, continuar al fallback
+                    
+                    # 2. Fallback a imagen genérica local
+                    if not image_displayed:
+                        if GENERIC_USER_IMAGE.exists():
+                            st.image(str(GENERIC_USER_IMAGE), use_container_width=True)
+                        else:
+                            st.markdown("🏀", help="Imagen no disponible")
                     
                     # Botón con el nombre del jugador
                     player_name = _create_player_button_content(p)

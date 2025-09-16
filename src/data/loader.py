@@ -17,27 +17,12 @@ from ..config import (
 
 
 def _validate_image_url(url):
-    """Valida si una URL de imagen es válida y confiable"""
+    """Valida si una URL de imagen es válida básicamente"""
     if not url or not isinstance(url, str):
         return False
     
     url = url.strip()
     if not url.startswith('http'):
-        return False
-    
-    # Filtrar URLs problemáticas conocidas
-    problematic_domains = [
-        'imagenes.feb.es',  # URLs dinámicas que no siempre funcionan
-        'Foto.aspx',        # Archivos ASP.NET que pueden fallar
-    ]
-    
-    for domain in problematic_domains:
-        if domain in url:
-            return False
-    
-    # Solo permitir URLs de imágenes estáticas confiables
-    valid_extensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif']
-    if not any(url.lower().endswith(ext) for ext in valid_extensions):
         return False
     
     return True
