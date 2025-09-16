@@ -24,6 +24,6 @@ def header_bar():
         col1, col2 = st.columns(2)
         with col1:
             if st.button("👤 Perfil", use_container_width=True):
-                st.toast("Sección de perfil (futuro)")
+                pass  # Funcionalidad futura
         with col2:
             st.button("📚 Equipos", use_container_width=True, disabled=True)

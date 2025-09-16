@@ -47,7 +47,6 @@ class GoogleDriveClient:
                         credentials_info, 
                         scopes=SCOPES
                     )
-                    st.toast("🔑 Usando credenciales desde Streamlit Secrets", icon="✅")
                 except Exception as e:
                     st.error(f"❌ Error al cargar credenciales desde Secrets: {str(e)}")
                     return
@@ -58,7 +57,6 @@ class GoogleDriveClient:
                         str(self.credentials_path), 
                         scopes=SCOPES
                     )
-                    st.toast("🔑 Usando credenciales desde archivo local", icon="✅")
                 except Exception as e:
                     st.error(f"❌ Error al cargar credenciales desde archivo: {str(e)}")
                     return
@@ -75,7 +73,6 @@ class GoogleDriveClient:
             user_email = about.get('user', {}).get('emailAddress', 'Usuario')
             
             self._authenticated = True
-            st.toast(f"✅ Conectado a Google Drive como: {user_email}", icon="☁️")
             
         except Exception as e:
             st.error(f"❌ Error al autenticar con Google Drive: {str(e)}")

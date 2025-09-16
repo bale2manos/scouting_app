@@ -145,7 +145,6 @@ class DriveDataLoader:
         
         # Descargar archivo
         if self.drive_client.download_file(team_pdf['id'], cached_file):
-            st.toast("✅ Informe del equipo descargado desde Google Drive", icon="☁️")
             return cached_file
         else:
             return None
@@ -195,9 +194,6 @@ class DriveDataLoader:
             if self.drive_client.download_file(image['id'], cached_image):
                 downloaded_images[image_name] = cached_image
         
-        if downloaded_images:
-            st.toast(f"✅ {len(downloaded_images)} imágenes de jugadores descargadas desde Google Drive", icon="🖼️")
-        
         return downloaded_images
     
     def sync_team_data(self, force_refresh: bool = False) -> Dict[str, Any]:
@@ -230,9 +226,7 @@ class DriveDataLoader:
             
             result['success'] = bool(team_report or player_images)
             
-            if result['success']:
-                st.toast("🎉 Sincronización con Google Drive completada", icon="☁️")
-            else:
+            if not result['success']:
                 st.warning("⚠️ No se pudieron descargar datos desde Google Drive")
                 
         except Exception as e:
@@ -267,7 +261,6 @@ class DriveDataLoader:
             if team_cache_dir.exists():
                 import shutil
                 shutil.rmtree(team_cache_dir)
-                st.toast("🗑️ Cache limpiado correctamente", icon="🧹")
                 return True
         except Exception as e:
             st.error(f"❌ Error al limpiar cache: {str(e)}")
