@@ -21,6 +21,47 @@ from ..config import (
 )
 
 
+import requests  # <-- arriba (si no estaba)
+
+@st.cache_data(show_spinner=False, ttl=3600)
+def _probe_image_url(url: str) -> bool:
+    try:
+        if not url or not isinstance(url, str):
+            return False
+        url = url.strip()
+        if not url.startswith("http"):
+            return False
+
+        headers = {
+            "Range": "bytes=0-1023",
+            "User-Agent": "Mozilla/5.0 Streamlit/1.0",
+            "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+        }
+        r = requests.get(url, headers=headers, timeout=4, stream=True)
+        if r.status_code not in (200, 206):
+            return False
+
+        ctype = r.headers.get("Content-Type", "").lower()
+        if not ctype.startswith("image/"):
+            return False
+
+        chunk = next(r.iter_content(1024), b"")
+        if not chunk:
+            return False
+
+        is_png = chunk.startswith(b"\x89PNG\r\n\x1a\n")
+        is_jpg = chunk.startswith(b"\xff\xd8\xff")
+        is_webp = chunk[:4] == b"RIFF" and b"WEBP" in chunk[:12]
+        return bool(is_png or is_jpg or is_webp)
+    except Exception:
+        return False
+
+
+def _safe_image_url(url: str) -> str:
+    """Devuelve la URL si es imagen real, si no devuelve ''."""
+    return url if _probe_image_url(url) else ""
+
+
 class DriveDataLoader:
     """Cargador de datos desde Google Drive con cache local"""
     
@@ -422,7 +463,7 @@ def load_players() -> List[Dict[str, Any]]:
                     'slug': slug,
                     'full_name': full_name,
                     'team': matching_player['EQUIPO'],
-                    'image_url': matching_player.get('IMAGEN', ''),
+                    'image_url': _safe_image_url(str(matching_player.get('IMAGEN', ''))),
                     'image_filename': image_filename,
                     'points': int(matching_player['PUNTOS']) if pd.notna(matching_player['PUNTOS']) else 0,
                     'minutes': float(matching_player['MINUTOS JUGADOS']) if pd.notna(matching_player['MINUTOS JUGADOS']) else 0.0,
