@@ -8,23 +8,20 @@ from ..components import header_bar
 from ..utils import embed_pdf_local, download_button_for_pdf, player_label, set_route
 from ..config import TEAM_SLUG, PLAYER_REPORTS_DIR, GENERIC_USER_IMAGE
 from ..data.drive_loader import load_players, get_team_report_path
+from .loading import view_loading_with_progress
 
 
 def view_equipo_informe():
     """Renderiza la vista del informe del equipo desde Google Drive"""
     header_bar()
     
-    # Obtener ruta del informe desde Google Drive
-    team_report_path = get_team_report_path()
+    # Mostrar loading mientras se carga el informe
+    with st.spinner("Cargando informe del equipo..."):
+        # Obtener ruta del informe desde Google Drive
+        team_report_path = get_team_report_path()
     
     if not team_report_path:
-        st.error("📄 Informe del equipo no disponible en Google Drive")
-        
-        st.info("🔄 La aplicación sincroniza automáticamente con Google Drive al cargarse.")
-        st.markdown("### Posibles soluciones:")
-        st.write("• Verificar que el archivo existe en Google Drive")
-        st.write("• Comprobar las credenciales de Google Drive")
-        st.write("• Reiniciar la aplicación para forzar sincronización")
+        st.error("📄 Informe del equipo no disponible")
         
         if st.button("👥 Ver jugadores disponibles", use_container_width=True):
             set_route("players")
@@ -32,7 +29,6 @@ def view_equipo_informe():
         return
     
     # Si el archivo existe, mostrarlo
-    st.caption("☁️ Cargado desde: Google Drive")
     
     # Botón de descarga
     download_button_for_pdf(team_report_path, "⬇️ Descargar informe del equipo", f"{TEAM_SLUG}.pdf")
@@ -50,8 +46,11 @@ def view_jugador_informe():
         st.error("No se ha seleccionado ningún jugador")
         return
     
-    players = load_players()
-    player = next((p for p in players if p.get("slug") == selected_player), None)
+    # Mostrar loading mientras se cargan los datos del jugador
+    with st.spinner("Cargando datos del jugador..."):
+        players = load_players()
+        player = next((p for p in players if p.get("slug") == selected_player), None)
+    
     if not player:
         st.error("Jugador no encontrado")
         return
@@ -65,7 +64,8 @@ def view_jugador_informe():
     # Intentar obtener la imagen desde Google Drive
     from ..data.drive_loader import get_player_image_path
     
-    informe_png_path = get_player_image_path(image_filename)
+    with st.spinner("Cargando informe visual..."):
+        informe_png_path = get_player_image_path(image_filename)
     image_to_download = None
     
     # Intentar cargar la imagen del informe
@@ -74,13 +74,11 @@ def view_jugador_informe():
             st.image(str(informe_png_path), use_container_width=True)
             image_to_download = informe_png_path
         except Exception as e:
-            st.warning(f"Error al cargar la imagen del informe: {str(e)}")
             # Usar imagen genérica como fallback
             _show_generic_image()
             image_to_download = _get_generic_image_path()
     else:
-        st.warning(f"No se encontró la imagen del informe: {image_filename}")
-        st.info("💡 Verificando descarga desde Google Drive...")
+        st.info("Imagen del informe no disponible")
         
         # Intentar forzar descarga
         from ..data.drive_loader import force_sync
@@ -122,11 +120,9 @@ def _show_generic_image():
             st.image(str(GENERIC_USER_IMAGE), use_container_width=True)
             return True
         except Exception as e:
-            st.error(f"Error al cargar imagen genérica: {str(e)}")
             st.info("El informe visual no está disponible en este momento.")
             return False
     else:
-        st.warning("No se encontró la imagen genérica de usuario.")
         st.info("El informe visual no está disponible en este momento.")
         return False
 

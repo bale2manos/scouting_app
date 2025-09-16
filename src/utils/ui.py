@@ -74,7 +74,7 @@ def embed_pdf_local(path: Path, height: int = 600, start_page: int = 1, show_dow
       - Reajuste automático tras rotación/cambio de tamaño (usa visualViewport).
     """
     if not path.exists() or path.stat().st_size == 0:
-        st.error(f"❌ PDF no encontrado o vacío: {path}")
+        st.info("PDF no disponible en este momento")
         return
 
     b64 = base64.b64encode(path.read_bytes()).decode("utf-8")
@@ -343,15 +343,13 @@ def embed_pdf_local(path: Path, height: int = 600, start_page: int = 1, show_dow
 def download_button_for_pdf(path: Path, label: str, file_name: str):
     """Crea un botón de descarga para archivos PDF."""
     if not path.exists():
-        st.warning(f"📄 Archivo no disponible para descarga: {path.name}")
-        st.button(label, disabled=True, use_container_width=True, help="Archivo no encontrado")
+        st.button(label, disabled=True, use_container_width=True, help="Archivo no disponible")
         return
     
     try:
         # Verificar que el archivo no esté vacío
         if path.stat().st_size == 0:
-            st.warning(f"📄 El archivo está vacío: {path.name}")
-            st.button(label, disabled=True, use_container_width=True, help="Archivo vacío")
+            st.button(label, disabled=True, use_container_width=True, help="Archivo no disponible")
             return
             
         st.download_button(
@@ -362,8 +360,7 @@ def download_button_for_pdf(path: Path, label: str, file_name: str):
             use_container_width=True
         )
     except Exception as e:
-        st.error(f"❌ Error al preparar descarga: {str(e)}")
-        st.button(label, disabled=True, use_container_width=True, help=f"Error: {str(e)}")
+        st.button(label, disabled=True, use_container_width=True, help="Error al preparar descarga")
 
 
 def player_label(n: int, name: str, surnames: str) -> str:

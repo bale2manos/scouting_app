@@ -168,7 +168,6 @@ class DriveDataLoader:
         
         team_folder_id = self.get_team_folder_id()
         if not team_folder_id:
-            st.warning(f"📁 No se encontró la carpeta del equipo: {TEAM_NAME_DISPLAY}")
             return None
         
         # Buscar archivo PDF del equipo
@@ -181,7 +180,6 @@ class DriveDataLoader:
                 break
         
         if not team_pdf:
-            st.warning(f"📄 No se encontró el archivo: {TEAM_SLUG}.pdf")
             return None
         
         # Descargar archivo
@@ -227,10 +225,6 @@ class DriveDataLoader:
             # Normalizar nombre del archivo a minúsculas para consistencia
             normalized_name = original_name.lower()
             cached_image = players_cache_dir / normalized_name
-            
-            # Debug info para desarrollo
-            if 'ALMENARA' in original_name.upper():
-                st.info(f"🔍 Procesando: {original_name} → {normalized_name}")
             
             # Verificar si usar cache
             if not force_refresh and self.is_cache_valid(cached_image):
@@ -362,29 +356,16 @@ def auto_sync_on_load():
         
         if is_production:
             # En producción, siempre sincronizar la primera vez
-            st.info("☁️ Sincronizando datos desde Google Drive...")
-            with st.spinner("🔄 Descargando archivos..."):
-                result = loader.sync_team_data(force_refresh=True)
+            result = loader.sync_team_data(force_refresh=True)
         else:
             # En desarrollo, usar cache si existe
-            with st.spinner("🔄 Sincronizando con Google Drive..."):
-                result = loader.sync_team_data(force_refresh=False)
+            result = loader.sync_team_data(force_refresh=False)
         
         st.session_state['drive_synced'] = result['success']
         st.session_state['sync_timestamp'] = time.time()
         
-        if result['success']:
-            # Mostrar información de sincronización
-            team_report = result.get('team_report')
-            player_images = result.get('player_images', {})
-            
-            if team_report:
-                st.success(f"✅ Informe del equipo sincronizado")
-            
-            if player_images:
-                st.success(f"✅ {len(player_images)} imágenes de jugadores sincronizadas")
-        else:
-            st.error("❌ Error en la sincronización inicial")
+        if not result['success']:
+            raise Exception("Error en la sincronización inicial")
 
 
 def load_players() -> List[Dict[str, Any]]:

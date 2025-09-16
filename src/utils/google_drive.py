@@ -29,7 +29,6 @@ class GoogleDriveClient:
         self._authenticated = False
         
         if not GOOGLE_DRIVE_AVAILABLE:
-            st.error("❌ Google Drive API no está disponible. Instala las dependencias necesarias.")
             return
             
         self._authenticate()
@@ -48,7 +47,6 @@ class GoogleDriveClient:
                         credentials_info, 
                         scopes=SCOPES
                     )
-                    st.success("🔑 Usando credenciales desde Streamlit Secrets")
             except Exception:
                 # Si falla secrets, continuar con archivo local
                 pass
@@ -60,15 +58,11 @@ class GoogleDriveClient:
                         str(self.credentials_path), 
                         scopes=SCOPES
                     )
-                    st.success("🔑 Usando credenciales desde archivo local")
                 except Exception as e:
-                    st.error(f"❌ Error al cargar credenciales desde archivo: {str(e)}")
                     return
             
             # Si no se encontraron credenciales
             if credentials is None:
-                st.error("❌ No se encontraron credenciales de Google Drive")
-                st.info("💡 Configura las credenciales en Streamlit Secrets o agrega el archivo credentials/google_drive_credentials.json")
                 return
             
             # Construir el servicio
@@ -79,11 +73,8 @@ class GoogleDriveClient:
             user_email = about.get('user', {}).get('emailAddress', 'Usuario')
             
             self._authenticated = True
-            st.success(f"✅ Conectado a Google Drive como: {user_email}")
             
         except Exception as e:
-            st.error(f"❌ Error al autenticar con Google Drive: {str(e)}")
-            st.info("💡 Verifica que las credenciales sean válidas y tengan permisos de Google Drive")
             self._authenticated = False
     
     def is_authenticated(self) -> bool:
@@ -122,7 +113,6 @@ class GoogleDriveClient:
             return results.get('files', [])
             
         except Exception as e:
-            st.error(f"❌ Error al listar archivos: {str(e)}")
             return []
     
     def list_folders_in_folder(self, folder_id: str) -> List[Dict[str, Any]]:
@@ -150,7 +140,6 @@ class GoogleDriveClient:
             return results.get('files', [])
             
         except Exception as e:
-            st.error(f"❌ Error al listar carpetas: {str(e)}")
             return []
     
     def download_file(self, file_id: str, destination_path: Path) -> bool:
@@ -187,7 +176,6 @@ class GoogleDriveClient:
             return True
             
         except Exception as e:
-            st.error(f"❌ Error al descargar archivo: {str(e)}")
             return False
     
     def find_team_folder(self, root_folder_id: str, team_name: str) -> Optional[str]:
@@ -231,7 +219,6 @@ class GoogleDriveClient:
             return file_info
             
         except Exception as e:
-            st.error(f"❌ Error al obtener información del archivo: {str(e)}")
             return None
 
 

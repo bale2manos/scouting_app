@@ -70,7 +70,6 @@ def load_players_dynamically() -> List[Dict[str, Any]]:
     try:
         # Leer Excel
         if not EXCEL_FILE.exists():
-            st.error(f"No se encontró el archivo Excel: {EXCEL_FILE}")
             return FALLBACK_PLAYERS
         
         df = pd.read_excel(EXCEL_FILE)
@@ -143,7 +142,6 @@ def load_players_dynamically() -> List[Dict[str, Any]]:
         players.sort(key=lambda x: x['number'])
         
     except Exception as e:
-        st.error(f"Error cargando jugadores: {str(e)}")
         return FALLBACK_PLAYERS
     
     return players

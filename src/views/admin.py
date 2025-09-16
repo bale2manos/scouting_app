@@ -43,11 +43,10 @@ def view_admin():
             f"📸 {drive_status['player_images_cached']} descargadas"
         )
     
-    # Información técnica
-    with st.expander("🔧 Información técnica"):
-        st.write(f"**Cache Directory:** `{drive_status['cache_dir']}`")
-        if drive_status['errors']:
-            st.error("**Errores:**")
+    # Mostrar errores importantes si los hay
+    if drive_status['errors']:
+        with st.expander("⚠️ Información adicional"):
+            st.warning("Se encontraron algunos problemas menores:")
             for error in drive_status['errors']:
                 st.write(f"• {error}")
     
@@ -68,14 +67,8 @@ def view_admin():
                     
                     if result['success']:
                         st.success("✅ Sincronización completada")
-                        if result['team_report']:
-                            st.info(f"📄 Informe del equipo: {result['team_report'].name}")
-                        if result['player_images']:
-                            st.info(f"🖼️ {len(result['player_images'])} imágenes de jugadores")
                     else:
                         st.error("❌ Error en la sincronización")
-                        for error in result.get('errors', []):
-                            st.write(f"• {error}")
     
     with col2:
         if st.button("🔄 Forzar actualización", use_container_width=True, help="Forzar descarga completa"):
@@ -115,18 +108,7 @@ def view_admin():
     # Configuración
     st.markdown("### ⚙️ Configuración")
     
-    with st.expander("📋 Configuración actual"):
-        from ..config import (
-            GOOGLE_DRIVE_ROOT_FOLDER_ID, 
-            USE_DRIVE_FIRST, 
-            CACHE_EXPIRY_HOURS,
-            GOOGLE_DRIVE_CREDENTIALS_PATH
-        )
-        
-        st.write(f"**Carpeta raíz:** `{GOOGLE_DRIVE_ROOT_FOLDER_ID}`")
-        st.write(f"**Priorizar Drive:** {'✅ Sí' if USE_DRIVE_FIRST else '❌ No'}")
-        st.write(f"**Expiración cache:** {CACHE_EXPIRY_HOURS} horas")
-        st.write(f"**Credenciales:** `{GOOGLE_DRIVE_CREDENTIALS_PATH}`")
+    st.info("La aplicación está configurada para sincronizar automáticamente con Google Drive.")
     
     # Navegación
     st.markdown("---")
