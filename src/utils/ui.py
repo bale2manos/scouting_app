@@ -387,6 +387,66 @@ def big_card(title: str, height: int = 220):
     )
 
 
+def safe_image(image_url: str = None, fallback_path: Path = None, placeholder: str = "🏀", **kwargs):
+    """
+    Muestra una imagen con fallback automático en caso de error
+    
+    Args:
+        image_url: URL de la imagen a mostrar
+        fallback_path: Path a imagen local de respaldo
+        placeholder: Emoji o texto si todo falla
+        **kwargs: Argumentos adicionales para st.image()
+    """
+    image_shown = False
+    
+    # 1. Intentar URL externa (solo si es válida)
+    if image_url and _is_reliable_image_url(image_url):
+        try:
+            st.image(image_url, **kwargs)
+            image_shown = True
+        except:
+            pass  # Continuar al fallback
+    
+    # 2. Fallback a imagen local
+    if not image_shown and fallback_path and fallback_path.exists():
+        try:
+            st.image(str(fallback_path), **kwargs)
+            image_shown = True
+        except:
+            pass  # Continuar al placeholder
+    
+    # 3. Placeholder final
+    if not image_shown:
+        st.markdown(f'<div style="text-align: center; font-size: 3rem;">{placeholder}</div>', unsafe_allow_html=True)
+
+
+def _is_reliable_image_url(url: str) -> bool:
+    """Verifica si una URL de imagen es confiable"""
+    if not url or not isinstance(url, str):
+        return False
+    
+    url = url.strip()
+    if not url.startswith('http'):
+        return False
+    
+    # Lista de dominios/patrones problemáticos
+    unreliable_patterns = [
+        'imagenes.feb.es',
+        'Foto.aspx',
+        '.aspx?',
+        'dynamic-image',
+        'temp-image'
+    ]
+    
+    for pattern in unreliable_patterns:
+        if pattern in url:
+            return False
+    
+    # Verificar que termine en extensión de imagen
+    valid_extensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.svg']
+    return any(url.lower().endswith(ext) for ext in valid_extensions)
+
+
 def apply_styles():
     """Aplica los estilos CSS globales."""
     st.markdown(CSS, unsafe_allow_html=True)

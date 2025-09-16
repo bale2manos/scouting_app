@@ -39,30 +39,38 @@ class GoogleDriveClient:
         try:
             SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
             
-            # Priorizar Streamlit Secrets
-            if hasattr(st, 'secrets') and "google_credentials" in st.secrets:
+            # Detectar si estamos en Streamlit Cloud o local
+            is_streamlit_cloud = hasattr(st, 'secrets') and hasattr(st.secrets, '_file_paths')
+            
+            # Priorizar archivo local en desarrollo, Secrets en producción
+            if self.credentials_path.exists():
+                try:
+                    credentials = service_account.Credentials.from_service_account_file(
+                        str(self.credentials_path), 
+                        scopes=SCOPES
+                    )
+                    # Solo mostrar mensaje en local
+                    if not is_streamlit_cloud:
+                        st.info("🔑 Usando credenciales desde archivo local")
+                except Exception as e:
+                    st.error(f"❌ Error al cargar credenciales desde archivo: {str(e)}")
+                    return
+                    
+            elif hasattr(st, 'secrets') and "google_credentials" in st.secrets:
                 try:
                     credentials_info = dict(st.secrets["google_credentials"])
                     credentials = service_account.Credentials.from_service_account_info(
                         credentials_info, 
                         scopes=SCOPES
                     )
+                    st.info("🔑 Usando credenciales desde Streamlit Secrets")
                 except Exception as e:
                     st.error(f"❌ Error al cargar credenciales desde Secrets: {str(e)}")
                     return
-                
-            elif self.credentials_path.exists():
-                try:
-                    credentials = service_account.Credentials.from_service_account_file(
-                        str(self.credentials_path), 
-                        scopes=SCOPES
-                    )
-                except Exception as e:
-                    st.error(f"❌ Error al cargar credenciales desde archivo: {str(e)}")
-                    return
             else:
                 st.error("❌ No se encontraron credenciales de Google Drive")
-                st.info("💡 Configura las credenciales en Streamlit Secrets o agrega el archivo credentials/google_drive_credentials.json")
+                st.info("💡 Para desarrollo local: agrega el archivo credentials/google_drive_credentials.json")
+                st.info("💡 Para Streamlit Cloud: configura las credenciales en Streamlit Secrets")
                 return
             
             # Construir el servicio
