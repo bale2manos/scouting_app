@@ -7,7 +7,7 @@ from .home import view_home
 from .team import view_team
 from .reports import view_equipo_informe, view_jugador_informe
 from .players import view_players
-from .loading import view_loading, view_loading_with_progress, view_error_loading
+from .loading import show_loading_screen, show_loading_screen_advanced, is_app_ready
 
 __all__ = [
     'view_home',
@@ -15,7 +15,7 @@ __all__ = [
     'view_equipo_informe',
     'view_jugador_informe',
     'view_players',
-    'view_loading',
-    'view_loading_with_progress',
-    'view_error_loading'
+    'show_loading_screen',
+    'show_loading_screen_advanced',
+    'is_app_ready'
 ]

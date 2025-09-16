@@ -15,7 +15,6 @@ from ..config import (
     GENERIC_USER_IMAGE
 )
 from ..data.drive_loader import load_players, get_player_image_path
-# from .loading import view_loading_with_progress  # Commented out to avoid import issues
 
 
 def view_players():
@@ -25,16 +24,8 @@ def view_players():
     # Encabezado
     st.markdown(f"## {TEAM_NAME_DISPLAY}")
     
-    # Mostrar loading mientras se cargan los jugadores
-    players_placeholder = st.empty()
-    
-    with players_placeholder.container():
-        with st.spinner("Cargando jugadores..."):
-            # Cargar jugadores desde Google Drive
-            players = load_players()
-    
-    # Limpiar el placeholder y mostrar contenido
-    players_placeholder.empty()
+    # Cargar jugadores desde Google Drive
+    players = load_players()
     
     if not players:
         st.info("No se encontraron jugadores para este equipo.")

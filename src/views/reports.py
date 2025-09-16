@@ -8,17 +8,14 @@ from ..components import header_bar
 from ..utils import embed_pdf_local, download_button_for_pdf, player_label, set_route
 from ..config import TEAM_SLUG, PLAYER_REPORTS_DIR, GENERIC_USER_IMAGE
 from ..data.drive_loader import load_players, get_team_report_path
-# from .loading import view_loading_with_progress  # Commented out to avoid import issues
 
 
 def view_equipo_informe():
     """Renderiza la vista del informe del equipo desde Google Drive"""
     header_bar()
     
-    # Mostrar loading mientras se carga el informe
-    with st.spinner("Cargando informe del equipo..."):
-        # Obtener ruta del informe desde Google Drive
-        team_report_path = get_team_report_path()
+    # Obtener ruta del informe desde Google Drive
+    team_report_path = get_team_report_path()
     
     if not team_report_path:
         st.error("📄 Informe del equipo no disponible")
@@ -46,10 +43,9 @@ def view_jugador_informe():
         st.error("No se ha seleccionado ningún jugador")
         return
     
-    # Mostrar loading mientras se cargan los datos del jugador
-    with st.spinner("Cargando datos del jugador..."):
-        players = load_players()
-        player = next((p for p in players if p.get("slug") == selected_player), None)
+    # Cargar datos del jugador
+    players = load_players()
+    player = next((p for p in players if p.get("slug") == selected_player), None)
     
     if not player:
         st.error("Jugador no encontrado")
@@ -64,8 +60,7 @@ def view_jugador_informe():
     # Intentar obtener la imagen desde Google Drive
     from ..data.drive_loader import get_player_image_path
     
-    with st.spinner("Cargando informe visual..."):
-        informe_png_path = get_player_image_path(image_filename)
+    informe_png_path = get_player_image_path(image_filename)
     image_to_download = None
     
     # Intentar cargar la imagen del informe
@@ -83,9 +78,8 @@ def view_jugador_informe():
         # Intentar forzar descarga
         from ..data.drive_loader import force_sync
         if st.button("🔄 Reintentar descarga", key="retry_download"):
-            with st.spinner("Descargando imagen..."):
-                force_sync()
-                st.rerun()
+            force_sync()
+            st.rerun()
         
         # Usar imagen genérica como fallback
         _show_generic_image()

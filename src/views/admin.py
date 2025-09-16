@@ -62,27 +62,25 @@ def view_admin():
             if not drive_status['authenticated']:
                 st.error("❌ Google Drive no está autenticado")
             else:
-                with st.spinner("Sincronizando desde Google Drive..."):
-                    result = sync_from_drive(force_refresh=False)
-                    
-                    if result['success']:
-                        st.success("✅ Sincronización completada")
-                    else:
-                        st.error("❌ Error en la sincronización")
+                result = sync_from_drive(force_refresh=False)
+                
+                if result['success']:
+                    st.success("✅ Sincronización completada")
+                else:
+                    st.error("❌ Error en la sincronización")
     
     with col2:
         if st.button("🔄 Forzar actualización", use_container_width=True, help="Forzar descarga completa"):
             if not drive_status['authenticated']:
                 st.error("❌ Google Drive no está autenticado")
             else:
-                with st.spinner("Descargando todo desde Google Drive..."):
-                    result = sync_from_drive(force_refresh=True)
-                    
-                    if result['success']:
-                        st.success("✅ Actualización forzada completada")
-                        st.balloons()
-                    else:
-                        st.error("❌ Error en la actualización")
+                result = sync_from_drive(force_refresh=True)
+                
+                if result['success']:
+                    st.success("✅ Actualización forzada completada")
+                    st.balloons()
+                else:
+                    st.error("❌ Error en la actualización")
     
     st.markdown("---")
     
