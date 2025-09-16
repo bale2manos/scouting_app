@@ -223,10 +223,14 @@ class DriveDataLoader:
         images = self.drive_client.list_files_in_folder(players_folder_id, 'png')
         
         for image in images:
-            image_name = image['name']
+            original_name = image['name']
             # Normalizar nombre del archivo a minúsculas para consistencia
-            normalized_name = image_name.lower()
+            normalized_name = original_name.lower()
             cached_image = players_cache_dir / normalized_name
+            
+            # Debug info para desarrollo
+            if 'ALMENARA' in original_name.upper():
+                st.info(f"🔍 Procesando: {original_name} → {normalized_name}")
             
             # Verificar si usar cache
             if not force_refresh and self.is_cache_valid(cached_image):
@@ -236,6 +240,11 @@ class DriveDataLoader:
             # Descargar imagen con nombre normalizado
             if self.drive_client.download_file(image['id'], cached_image):
                 downloaded_images[normalized_name] = cached_image
+                if 'ALMENARA' in original_name.upper():
+                    st.success(f"✅ Descargado: {normalized_name}")
+            else:
+                if 'ALMENARA' in original_name.upper():
+                    st.error(f"❌ Error descargando: {original_name}")
         
         return downloaded_images
     
@@ -292,8 +301,27 @@ class DriveDataLoader:
             return {}
         
         images = {}
+        needs_cleanup = False
+        
         for file_path in players_cache_dir.glob("*.png"):
-            images[file_path.name] = file_path
+            filename = file_path.name
+            # Verificar si hay archivos con nombres en mayúsculas (cache obsoleto)
+            if filename != filename.lower():
+                needs_cleanup = True
+                st.warning(f"⚠️ Archivo obsoleto detectado: {filename}")
+            else:
+                images[filename] = file_path
+        
+        # Si detectamos archivos obsoletos, limpiar cache
+        if needs_cleanup:
+            st.info("🧹 Limpiando cache obsoleto...")
+            try:
+                import shutil
+                shutil.rmtree(players_cache_dir)
+                players_cache_dir.mkdir(parents=True, exist_ok=True)
+                return {}  # Forzar descarga
+            except Exception as e:
+                st.error(f"❌ Error limpiando cache: {str(e)}")
         
         return images
     
@@ -569,6 +597,11 @@ def force_sync():
     """Fuerza una sincronización completa con Google Drive"""
     try:
         loader = get_drive_loader()
+        
+        # Limpiar cache antes de sincronizar
+        st.info("🧹 Limpiando cache antes de sincronización...")
+        loader.clear_cache()
+        
         result = loader.sync_team_data(force_refresh=True)
         
         # Actualizar estado de sesión
@@ -580,6 +613,31 @@ def force_sync():
     except Exception as e:
         st.error(f"❌ Error en sincronización forzada: {str(e)}")
         return {'success': False, 'errors': [str(e)]}
+
+
+def debug_player_files():
+    """Función de debugging para verificar archivos de jugadores"""
+    try:
+        loader = get_drive_loader()
+        
+        # Mostrar archivos en cache local
+        cached_images = loader.get_cached_player_images()
+        st.subheader("📁 Archivos en Cache Local:")
+        for filename, path in cached_images.items():
+            st.write(f"• {filename} → {path}")
+        
+        # Mostrar archivos en Google Drive
+        team_folder_id = loader.get_team_folder_id()
+        if team_folder_id:
+            players_folder_id = loader.get_players_folder_id(team_folder_id)
+            if players_folder_id and loader.drive_client:
+                images = loader.drive_client.list_files_in_folder(players_folder_id, 'png')
+                st.subheader("☁️ Archivos en Google Drive:")
+                for image in images:
+                    st.write(f"• {image['name']} → {image['name'].lower()}")
+        
+    except Exception as e:
+        st.error(f"❌ Error en debugging: {str(e)}")
 
 
 def get_sync_status() -> Dict[str, Any]:

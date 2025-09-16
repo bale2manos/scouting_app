@@ -14,7 +14,7 @@ from src.views import (
     view_players
 )
 from src.utils import set_route
-from src.data.drive_loader import auto_sync_on_load
+from src.data.drive_loader import auto_sync_on_load, debug_player_files, force_sync
 
 
 def main():
@@ -37,6 +37,23 @@ def main():
         view_players()
     elif route == "jugador_informe":
         view_jugador_informe()
+    elif route == "debug":
+        # Página temporal de debugging
+        st.title("🔍 Debug: Archivos de Jugadores")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("🔄 Forzar Sincronización"):
+                force_sync()
+                st.rerun()
+        
+        with col2:
+            if st.button("📋 Mostrar Debug Info"):
+                debug_player_files()
+        
+        st.markdown("---")
+        st.markdown("Para acceder: Agrega `?route=debug` a la URL")
+        
     else:
         set_route("home")
 
