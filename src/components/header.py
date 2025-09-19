@@ -4,7 +4,7 @@
 Componente de header de la aplicación
 """
 import streamlit as st
-from src.utils.ui import back_button
+from src.utils.ui import back_button, set_route
 
 
 def header_bar():
@@ -26,4 +26,5 @@ def header_bar():
             if st.button("👤 Perfil", use_container_width=True):
                 pass  # Funcionalidad futura
         with col2:
-            st.button("📚 Equipos", use_container_width=True, disabled=True)
+            if st.button("📚 Equipos", use_container_width=True):
+                set_route("teams")

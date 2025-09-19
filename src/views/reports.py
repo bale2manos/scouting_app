@@ -14,7 +14,24 @@ def view_equipo_informe():
     """Renderiza la vista del informe del equipo desde Google Drive"""
     header_bar()
     
-    # Obtener ruta del informe desde Google Drive
+    # Obtener equipo seleccionado de session_state
+    selected_team = st.session_state.get('selected_team')
+    
+    # Si no hay equipo seleccionado, usar el por defecto
+    if selected_team:
+        team_name = selected_team['name']
+        team_slug = selected_team['slug']
+        # Para equipos seleccionados específicos, mostrar advertencia
+        if team_name != st.session_state.get('default_team_name', ''):
+            st.info(f"📄 Viendo informe de: **{team_name}**")
+            st.warning("Funcionalidad de informes dinámicos en desarrollo.")
+            if st.button("👥 Ver jugadores disponibles", use_container_width=True):
+                set_route("players")
+            return
+    else:
+        team_slug = TEAM_SLUG
+    
+    # Obtener ruta del informe desde Google Drive (usa configuración por defecto)
     team_report_path = get_team_report_path()
     
     if not team_report_path:
@@ -28,7 +45,7 @@ def view_equipo_informe():
     # Si el archivo existe, mostrarlo
     
     # Botón de descarga
-    download_button_for_pdf(team_report_path, "⬇️ Descargar informe del equipo", f"{TEAM_SLUG}.pdf")
+    download_button_for_pdf(team_report_path, "⬇️ Descargar informe del equipo", f"{team_slug}.pdf")
     
     # Mostrar PDF
     embed_pdf_local(team_report_path)

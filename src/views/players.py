@@ -21,11 +21,33 @@ def view_players():
     """Renderiza la vista de jugadores desde Google Drive"""
     header_bar()
     
+    # Obtener equipo seleccionado de session_state
+    selected_team = st.session_state.get('selected_team')
+    
+    # Si no hay equipo seleccionado, usar el por defecto
+    if selected_team:
+        team_name = selected_team['name']
+        team_slug = selected_team['slug']
+    else:
+        team_name = TEAM_NAME_DISPLAY
+        team_slug = None  # Usar None para indicar que use la configuración por defecto
+    
     # Encabezado
-    st.markdown(f"## {TEAM_NAME_DISPLAY}")
+    st.markdown(f"## {team_name}")
     
     # Cargar jugadores desde Google Drive
-    players = load_players()
+    if selected_team:
+        # Para equipos seleccionados específicos, necesitaríamos lógica adicional
+        # Por ahora usamos la función existente que funciona con el equipo por defecto
+        players = load_players()
+        # Filtrar jugadores si el equipo seleccionado es diferente al por defecto
+        if team_name != TEAM_NAME_DISPLAY:
+            # Aquí podríamos implementar lógica para cargar jugadores específicos del equipo
+            st.info(f"Mostrando jugadores de: {team_name}")
+            st.warning("Funcionalidad de carga dinámica de jugadores en desarrollo.")
+            players = []  # Por ahora, mostrar lista vacía para equipos no configurados
+    else:
+        players = load_players()
     
     if not players:
         st.info("No se encontraron jugadores para este equipo.")

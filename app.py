@@ -12,6 +12,7 @@ from src.views import (
     view_equipo_informe,
     view_jugador_informe,
     view_players,
+    view_teams,
     show_loading_screen,
     is_app_ready
 )
@@ -41,6 +42,8 @@ def main():
 
     if route == "home":
         view_home()
+    elif route == "teams":
+        view_teams()
     elif route == "team":
         view_team()
     elif route == "equipo_informe":
