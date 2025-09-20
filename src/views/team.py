@@ -17,18 +17,6 @@ def view_team():
     # Obtener equipo seleccionado de session_state
     selected_team = st.session_state.get('selected_team')
     
-    # Si no hay equipo seleccionado, usar el por defecto
-    if selected_team:
-        team_name = selected_team['name']
-        team_slug = selected_team['slug']
-    else:
-        team_name = TEAM_NAME_DISPLAY
-        team_slug = TEAM_SLUG
-    
-    # Obtener equipo seleccionado de session_state
-    selected_team = st.session_state.get('selected_team')
-    
-    # Si no hay equipo seleccionado, usar el por defecto
     if selected_team:
         team_name = selected_team['name']
         team_slug = selected_team['slug']
@@ -82,8 +70,16 @@ def view_team():
         
         st.markdown("<br>", unsafe_allow_html=True)
         
-        # Botón VER VIDEOS (deshabilitado)
-        st.button("🎬 VER VIDEOS", 
-                 help="Próximamente", 
-                 use_container_width=True, 
-                 disabled=True)
+        # Botón VER JUGADORES
+        if st.button("👥 VER JUGADORES", 
+                    help="Ver jugadores del equipo", 
+                    use_container_width=True):
+            set_route("players")
+        
+        st.markdown("<br>", unsafe_allow_html=True)
+        
+        # Botón VOLVER A EQUIPOS
+        if st.button("🔙 VOLVER A EQUIPOS", 
+                    help="Regresar a la lista de equipos", 
+                    use_container_width=True):
+            set_route("teams")

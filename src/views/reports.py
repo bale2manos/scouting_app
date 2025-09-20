@@ -12,42 +12,71 @@ from ..data.drive_loader import load_players, get_team_report_path
 
 def view_equipo_informe():
     """Renderiza la vista del informe del equipo desde Google Drive"""
+    from ..utils import embed_pdf_local, download_button_for_pdf
+    from ..config import TEAM_SLUG, TEAM_NAME_DISPLAY
+    from ..data.drive_loader import get_team_report_path_by_drive_id
+    
     header_bar()
     
     # Obtener equipo seleccionado de session_state
     selected_team = st.session_state.get('selected_team')
     
-    # Si no hay equipo seleccionado, usar el por defecto
     if selected_team:
         team_name = selected_team['name']
         team_slug = selected_team['slug']
-        # Para equipos seleccionados específicos, mostrar advertencia
-        if team_name != st.session_state.get('default_team_name', ''):
-            st.info(f"📄 Viendo informe de: **{team_name}**")
-            st.warning("Funcionalidad de informes dinámicos en desarrollo.")
+        drive_id = selected_team['drive_id']
+        
+        st.info(f"📄 Viendo informe de: **{team_name}**")
+        
+        # Verificar si es el equipo principal configurado
+        if team_name.upper() == TEAM_NAME_DISPLAY.upper():
+            # Es el equipo principal, usar la función existente
+            team_report_path = get_team_report_path()
+        else:
+            # Es otro equipo, usar la nueva función dinámica
+            with st.spinner(f"🔍 Buscando informe de {team_name} en Google Drive..."):
+                team_report_path = get_team_report_path_by_drive_id(team_name, team_slug, drive_id)
+            
+        if team_report_path:
+            st.success(f"✅ Informe encontrado para **{team_name}**")
+            
+            # Botón de descarga
+            download_button_for_pdf(team_report_path, "⬇️ Descargar informe del equipo", f"{team_slug}.pdf")
+            
+            # Mostrar PDF
+            embed_pdf_local(team_report_path)
+        else:
+            st.warning(f"📄 **No se encontró informe** para **{team_name}**")
+            st.info("💡 El sistema buscó archivos PDF en la carpeta del equipo en Google Drive.")
+            
+            # Botones de navegación
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("👥 Ver jugadores del equipo", use_container_width=True, type="primary"):
+                    set_route("players")
+            with col2:
+                if st.button("🔙 Volver a equipos", use_container_width=True):
+                    set_route("teams")
+                
+    else:
+        # Sin equipo seleccionado, usar configuración por defecto
+        team_slug = TEAM_SLUG
+        team_report_path = get_team_report_path()
+        
+        if not team_report_path:
+            st.error("📄 Informe del equipo no disponible")
+            
             if st.button("👥 Ver jugadores disponibles", use_container_width=True):
                 set_route("players")
+            
             return
-    else:
-        team_slug = TEAM_SLUG
-    
-    # Obtener ruta del informe desde Google Drive (usa configuración por defecto)
-    team_report_path = get_team_report_path()
-    
-    if not team_report_path:
-        st.error("📄 Informe del equipo no disponible")
         
-        if st.button("👥 Ver jugadores disponibles", use_container_width=True):
-            set_route("players")
+        # Mostrar el informe por defecto
+        # Botón de descarga
+        download_button_for_pdf(team_report_path, "⬇️ Descargar informe del equipo", f"{team_slug}.pdf")
         
-        return
-    
-    # Si el archivo existe, mostrarlo
-    
-    # Botón de descarga
-    download_button_for_pdf(team_report_path, "⬇️ Descargar informe del equipo", f"{team_slug}.pdf")
-    
-    # Mostrar PDF
+        # Mostrar PDF
+        embed_pdf_local(team_report_path)
     embed_pdf_local(team_report_path)
 
 

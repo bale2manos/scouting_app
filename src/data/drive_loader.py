@@ -649,3 +649,329 @@ def get_sync_status() -> Dict[str, Any]:
         'last_sync': st.session_state.get('sync_timestamp', 0),
         'drive_available': get_drive_client() is not None
     }
+
+
+def get_team_report_path_by_drive_id(team_name: str, team_slug: str, drive_id: str) -> Optional[Path]:
+    """
+    Obtiene la ruta del informe de cualquier equipo desde Google Drive basándose en su drive_id
+    
+    Args:
+        team_name: Nombre del equipo 
+        team_slug: Slug del equipo (para cache)
+        drive_id: ID de la carpeta del equipo en Google Drive
+    
+    Returns:
+        Path al archivo del informe o None si no está disponible
+    """
+    try:
+        drive_client = get_drive_client()
+        if not drive_client or not drive_client.is_authenticated():
+            return None
+        
+        # Crear carpeta de cache para este equipo específico
+        team_cache_dir = DRIVE_CACHE_DIR / team_slug
+        team_cache_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Ruta del archivo en cache
+        cached_file = team_cache_dir / f"{team_slug}.pdf"
+        
+        # Verificar si el archivo en cache es válido (menos de CACHE_EXPIRY_HOURS horas)
+        if cached_file.exists():
+            file_age_hours = (time.time() - cached_file.stat().st_mtime) / 3600
+            if file_age_hours < CACHE_EXPIRY_HOURS:
+                return cached_file
+        
+        # Buscar archivo PDF del equipo en Google Drive
+        files = drive_client.list_files_in_folder(drive_id, 'pdf')
+        
+        team_pdf = None
+        for file in files:
+            file_name_lower = file['name'].lower()
+            # Buscar archivos PDF que puedan ser el informe del equipo
+            if (team_slug.lower() in file_name_lower or 
+                'informe' in file_name_lower or 
+                'report' in file_name_lower or
+                file_name_lower.endswith('.pdf')):
+                team_pdf = file
+                break
+        
+        if not team_pdf:
+            return None
+        
+        # Descargar el archivo directamente a la ruta de cache
+        success = drive_client.download_file(team_pdf['id'], cached_file)
+        if not success:
+            return None
+        
+        return cached_file
+        
+    except Exception as e:
+        st.error(f"❌ Error cargando informe de {team_name}: {str(e)}")
+        return None
+
+
+def load_players_by_drive_id(team_name: str, team_slug: str, drive_id: str) -> List[Dict[str, Any]]:
+    """
+    Carga la lista de jugadores de cualquier equipo desde Google Drive basándose en su drive_id
+    
+    Args:
+        team_name: Nombre del equipo
+        team_slug: Slug del equipo (para cache)
+        drive_id: ID de la carpeta del equipo en Google Drive
+    
+    Returns:
+        Lista de diccionarios con datos de jugadores
+    """
+    try:
+        drive_client = get_drive_client()
+        if not drive_client or not drive_client.is_authenticated():
+            return []
+        
+        # Buscar carpeta de jugadores dentro de la carpeta del equipo
+        folders = drive_client.list_folders_in_folder(drive_id)
+        jugadores_folder_id = None
+        
+        for folder in folders:
+            if folder['name'].lower() in ['jugadores', 'players']:
+                jugadores_folder_id = folder['id']
+                break
+        
+        if not jugadores_folder_id:
+            return []
+        
+        # Crear carpeta de cache para imágenes de este equipo
+        team_images_cache_dir = DRIVE_CACHE_DIR / team_slug / "jugadores"
+        team_images_cache_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Obtener lista de archivos de imagen en la carpeta de jugadores
+        image_files = drive_client.list_files_in_folder(jugadores_folder_id, 'png')
+        image_files.extend(drive_client.list_files_in_folder(jugadores_folder_id, 'jpg'))
+        image_files.extend(drive_client.list_files_in_folder(jugadores_folder_id, 'jpeg'))
+        
+        if not image_files:
+            return []
+        
+        # Descargar imágenes que no estén en cache
+        available_images = {}
+        for image_file in image_files:
+            image_filename = image_file['name']
+            cached_image_path = team_images_cache_dir / image_filename
+            
+            # Verificar si la imagen está en cache y es válida
+            if cached_image_path.exists():
+                file_age_hours = (time.time() - cached_image_path.stat().st_mtime) / 3600
+                if file_age_hours < CACHE_EXPIRY_HOURS:
+                    available_images[image_filename] = cached_image_path
+                    continue
+            
+            # Descargar imagen
+            success = drive_client.download_file(image_file['id'], cached_image_path)
+            if success:
+                available_images[image_filename] = cached_image_path
+        
+        if not available_images:
+            return []
+        
+        # Cargar datos del Excel
+        if not EXCEL_FILE.exists():
+            # Si no hay Excel, crear jugadores basados solo en los nombres de archivo
+            players_data = []
+            for image_filename in available_images.keys():
+                image_base = image_filename.replace('.png', '').replace('.jpg', '').replace('.jpeg', '')
+                
+                # Intentar extraer nombre del archivo
+                if '_' in image_base:
+                    parts = image_base.split('_')
+                    surnames = parts[0].replace('_', ' ')
+                    name = parts[1] if len(parts) > 1 else 'N'
+                else:
+                    surnames = image_base
+                    name = 'N'
+                
+                players_data.append({
+                    'name': name,
+                    'surnames': surnames,
+                    'full_name': f"{name} {surnames}",
+                    'position': '',
+                    'height': '',
+                    'age': '',
+                    'team': team_name,
+                    'image_path': str(available_images[image_filename]),
+                    'image_filename': image_filename
+                })
+            
+            return players_data
+        
+        # Cargar Excel y buscar coincidencias
+        df = pd.read_excel(EXCEL_FILE)
+        df = df.fillna("")
+        
+        print(f"📊 Excel: {len(df)} jugadores | Equipo: {team_name} | Imágenes: {len(available_images)}")
+        print(f"📝 Columnas disponibles: {list(df.columns)}")
+        
+        # Buscar columnas relacionadas con imágenes
+        image_columns = [col for col in df.columns if 'IMAGEN' in col.upper() or 'FOTO' in col.upper() or 'PHOTO' in col.upper()]
+        print(f"🖼️ Columnas de imagen encontradas: {image_columns}")
+        
+        if image_columns:
+            for col in image_columns:
+                sample_values = df[col].dropna().head(3).tolist()
+                print(f"   {col}: ejemplos = {sample_values}")
+        
+        # INVERTIR LA LÓGICA: partir de las imágenes en Drive y buscar en Excel
+        players_data = []
+        used_players = set()
+        
+        for image_filename, image_path in available_images.items():
+            # Extraer información del nombre del archivo
+            image_base = image_filename.replace('.png', '').replace('.jpg', '').replace('.jpeg', '').upper()
+            
+            # Buscar coincidencia en el Excel (buscar en cualquier equipo, no solo el actual)
+            matching_player = None
+            matching_index = None
+            
+            for idx, row in df.iterrows():
+                if idx in used_players:
+                    continue
+                    
+                full_name = row.get('JUGADOR', '')
+                if not full_name:
+                    continue
+                
+                # Extraer apellidos y nombre del Excel
+                if ',' in full_name:
+                    parts = full_name.split(',', 1)
+                    surnames = parts[0].strip()
+                    name = parts[1].strip() if len(parts) > 1 else ""
+                    name = name.split()[0] if name else "N"
+                    name = name[0] if name else "N"
+                else:
+                    name_parts = full_name.split(' ', 1) if full_name else ['', '']
+                    if len(name_parts) >= 2:
+                        first_part = name_parts[0].replace('.', '').strip()
+                        surnames = name_parts[1]
+                        name = first_part
+                    else:
+                        name = full_name[:1] if full_name else "N"
+                        surnames = full_name[2:] if len(full_name) > 2 else "APELLIDOS"
+                
+                # Normalizar para comparación
+                surnames_normalized = surnames.upper().replace(' ', '_').replace('Ñ', 'N').replace(',', '')
+                name_normalized = name.upper().replace('Á', 'A').replace('É', 'E').replace('Í', 'I').replace('Ó', 'O').replace('Ú', 'U').replace('Ü', 'U')
+                
+                # Verificar coincidencias
+                expected_pattern = f"{surnames_normalized}_{name_normalized}"
+                expected_pattern_initial = f"{surnames_normalized}_{name_normalized[0]}" if len(name_normalized) > 1 else expected_pattern
+                
+                if (image_base == expected_pattern or 
+                    image_base == expected_pattern_initial or
+                    image_base.startswith(surnames_normalized + '_')):
+                    matching_player = row
+                    matching_index = idx
+                    print(f"✅ MATCH: {image_filename} → {full_name}")
+                    break
+            
+            if matching_player is not None and matching_index is not None:
+                used_players.add(matching_index)
+                
+                # Extraer datos del Excel
+                full_name = matching_player['JUGADOR']
+                
+                if ',' in full_name:
+                    parts = full_name.split(',', 1)
+                    surnames = parts[0].strip()
+                    name = parts[1].strip() if len(parts) > 1 else ""
+                    name = name.split()[0] if name else "N"
+                    name = name[0] if name else "N"
+                else:
+                    name_parts = full_name.split(' ', 1) if full_name else ['', '']
+                    if len(name_parts) >= 2:
+                        first_part = name_parts[0].replace('.', '').strip()
+                        surnames = name_parts[1]
+                        name = first_part
+                    else:
+                        name = full_name[:1] if full_name else "N"
+                        surnames = full_name[2:] if len(full_name) > 2 else "APELLIDOS"
+                
+                # Extraer dorsal y otros datos del Excel
+                dorsal = int(matching_player['DORSAL']) if pd.notna(matching_player['DORSAL']) else 0
+                imagen_url = matching_player.get('IMAGEN', '')
+                
+                print(f"📊 DATOS EXCEL:")
+                print(f"   👤 Jugador: {full_name}")
+                print(f"   🔢 Dorsal: {dorsal}")
+                print(f"   📸 IMAGEN columna: '{imagen_url}' (tipo: {type(imagen_url)}, is_null: {pd.isna(imagen_url)})")
+                print(f"   📁 image_path local: {image_path}")
+                print(f"   🗂️ image_filename: {image_filename}")
+                
+                # Verificar todas las columnas disponibles que empiecen con IMAGEN o FOTO
+                available_cols = [col for col in matching_player.index if 'IMAGEN' in col.upper() or 'FOTO' in col.upper()]
+                print(f"   🔍 Columnas imagen disponibles: {available_cols}")
+                for col in available_cols:
+                    print(f"      {col}: '{matching_player.get(col, 'N/A')}'")
+                
+                # Crear slug único usando nombre del archivo
+                slug = image_filename.replace('.png', '').replace('.jpg', '').replace('.jpeg', '').lower()
+                
+                players_data.append({
+                    'number': dorsal,
+                    'name': name,
+                    'surnames': surnames,
+                    'slug': slug,
+                    'full_name': full_name,
+                    'team': team_name,  # Usar el nombre del equipo actual, no del Excel
+                    'image_url': imagen_url,  # URL del Excel
+                    'image_filename': image_filename,
+                    'image_path': str(image_path),  # Ruta local de la imagen
+                    'position': matching_player.get('POSICION', ''),
+                    'height': matching_player.get('ALTURA', ''),
+                    'age': matching_player.get('EDAD', ''),
+                    'points': int(matching_player['PUNTOS']) if pd.notna(matching_player['PUNTOS']) else 0,
+                    'minutes': float(matching_player['MINUTOS JUGADOS']) if pd.notna(matching_player['MINUTOS JUGADOS']) else 0.0,
+                    'games_played': int(matching_player['PJ']) if pd.notna(matching_player['PJ']) else 0,
+                    'bio_url': matching_player.get('BIO_URL', ''),
+                    'photo_url': matching_player.get('FOTO_URL', '')
+                })
+            else:
+                # No se encontró en Excel, crear entrada básica
+                print(f"❌ NO MATCH: {image_filename} (buscó como '{image_base}') → creando entrada básica")
+                
+                image_base_clean = image_filename.replace('.png', '').replace('.jpg', '').replace('.jpeg', '')
+                
+                if '_' in image_base_clean:
+                    parts = image_base_clean.split('_')
+                    surnames = parts[0].replace('_', ' ')
+                    name = parts[1] if len(parts) > 1 else 'N'
+                else:
+                    surnames = image_base_clean
+                    name = 'N'
+                
+                # Crear slug único
+                slug = image_base_clean.lower()
+                
+                players_data.append({
+                    'number': 0,  # Sin dorsal
+                    'name': name,
+                    'surnames': surnames,
+                    'slug': slug,
+                    'full_name': f"{name} {surnames}",
+                    'team': team_name,
+                    'image_url': '',  # Vacío para usar imagen local
+                    'image_filename': image_filename,
+                    'image_path': str(image_path),  # Ruta local de la imagen
+                    'position': '',
+                    'height': '',
+                    'age': '',
+                    'points': 0,
+                    'minutes': 0.0,
+                    'games_played': 0,
+                    'bio_url': '',
+                    'photo_url': ''
+                })
+        
+        print(f"🏁 Procesamiento completado: {len(players_data)} jugadores cargados")
+        return players_data
+        
+    except Exception as e:
+        st.error(f"❌ Error cargando jugadores de {team_name}: {str(e)}")
+        return []
