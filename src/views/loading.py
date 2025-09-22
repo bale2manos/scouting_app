@@ -4,6 +4,7 @@
 Vista de carga profesional y minimalista
 """
 import streamlit as st
+import time
 
 
 def show_loading_screen():
@@ -129,5 +130,19 @@ def show_loading_screen_advanced():
 
 
 def is_app_ready():
-    """Verifica si la app está lista para mostrar contenido"""
+    """Verifica si la app está lista para mostrar contenido con timeout de seguridad"""
+    # Verificar si ya está sincronizado
+    if st.session_state.get('drive_synced', False):
+        return True
+    
+    # Verificar timeout para evitar loops infinitos
+    sync_start_time = st.session_state.get('sync_start_time', time.time())
+    if 'sync_start_time' not in st.session_state:
+        st.session_state['sync_start_time'] = sync_start_time
+    
+    # Si han pasado más de 30 segundos, asumir que está listo para evitar loops
+    if time.time() - sync_start_time > 30:
+        st.session_state['drive_synced'] = True
+        return True
+    
     return st.session_state.get('drive_synced', False)

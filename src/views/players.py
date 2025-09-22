@@ -9,6 +9,7 @@ from ..components import header_bar
 from ..utils import player_label, set_route
 from ..config import (
     TEAM_NAME_DISPLAY, 
+    TEAM_SLUG,
     PLAYERS_PER_ROW, 
     PLAYER_IMAGE_WIDTH,
     PLAYER_REPORTS_DIR,
@@ -36,12 +37,14 @@ def view_players():
         st.info(f"👥 Mostrando jugadores de: **{team_name}**")
         
         # Verificar si es el equipo principal configurado
-        if team_name.upper() == TEAM_NAME_DISPLAY.upper():
+        if (team_name.upper() == TEAM_NAME_DISPLAY.upper() or 
+            team_slug == TEAM_SLUG or 
+            drive_id is None):
             # Es el equipo principal, usar la función existente
             players = load_players()
         else:
             # Es otro equipo, usar la nueva función dinámica
-            with st.spinner(f"� Cargando jugadores de {team_name} desde Google Drive..."):
+            with st.spinner(f"Cargando jugadores de {team_name} desde Google Drive..."):
                 players = load_players_by_drive_id(team_name, team_slug, drive_id)
                 
     else:

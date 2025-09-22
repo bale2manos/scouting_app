@@ -4,6 +4,7 @@
 Utilidades de interfaz de usuario para Streamlit
 """
 import base64
+import time
 from pathlib import Path
 from typing import Optional, List, Tuple
 import streamlit as st
@@ -22,13 +23,18 @@ def set_route(route: str, **kwargs):
     # Solo agregar al historial si es una ruta diferente
     if current_route != route:
         st.session_state["navigation_history"].append(current_route)
-        # Mantener solo las últimas 5 rutas para no sobrecargar
-        if len(st.session_state["navigation_history"]) > 5:
-            st.session_state["navigation_history"] = st.session_state["navigation_history"][-5:]
+    # Solo agregar al historial si es una ruta diferente
+    if current_route != route:
+        st.session_state["navigation_history"].append(current_route)
+        # Mantener solo las últimas 10 rutas
+        if len(st.session_state["navigation_history"]) > 10:
+            st.session_state["navigation_history"] = st.session_state["navigation_history"][-10:]
     
     st.session_state["route"] = route
     for k, v in kwargs.items():
         st.session_state[k] = v
+    
+    # Forzar rerun inmediato
     if hasattr(st, "rerun"):
         st.rerun()
     else:
@@ -340,27 +346,37 @@ def embed_pdf_local(path: Path, height: int = 600, start_page: int = 1, show_dow
 
 
 
-def download_button_for_pdf(path: Path, label: str, file_name: str):
-    """Crea un botón de descarga para archivos PDF."""
+def download_button_for_pdf(path: Path, label: str, file_name: str, button_key: str = None):
+    """Crea un botón de descarga para archivos PDF. Retorna True si se hizo clic."""
     if not path.exists():
         st.button(label, disabled=True, use_container_width=True, help="Archivo no disponible")
-        return
+        return False
     
     try:
         # Verificar que el archivo no esté vacío
         if path.stat().st_size == 0:
             st.button(label, disabled=True, use_container_width=True, help="Archivo no disponible")
-            return
-            
-        st.download_button(
+            return False
+        
+        # Usar key proporcionado o generar uno estable
+        if button_key is None:
+            button_key = f"pdf_download_{file_name.replace('.pdf', '').replace('.', '_')}"
+        
+        # Botón de descarga que retorna True si se hizo clic
+        clicked = st.download_button(
             label, 
             data=path.read_bytes(), 
             file_name=file_name,
             mime="application/pdf",
-            use_container_width=True
+            use_container_width=True,
+            key=button_key
         )
+        
+        return clicked
+            
     except Exception as e:
         st.button(label, disabled=True, use_container_width=True, help="Error al preparar descarga")
+        return False
 
 
 def player_label(n: int, name: str, surnames: str) -> str:

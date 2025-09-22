@@ -595,6 +595,79 @@ def get_player_image_path(player_name: str) -> Optional[Path]:
         return None
 
 
+def get_player_image_path_by_drive_id(player_name: str, team_name: str, team_slug: str, drive_id: str) -> Optional[Path]:
+    """
+    Obtiene la ruta de la imagen de un jugador desde un equipo específico por drive_id
+    
+    Args:
+        player_name: Nombre del archivo de imagen (ej: "jugador_1.png")
+        team_name: Nombre del equipo
+        team_slug: Slug del equipo (para cache)
+        drive_id: ID de la carpeta del equipo en Google Drive
+    
+    Returns:
+        Path a la imagen o None si no está disponible
+    """
+    try:
+        drive_client = get_drive_client()
+        if not drive_client or not drive_client.is_authenticated():
+            return None
+        
+        # Buscar carpeta de jugadores dentro de la carpeta del equipo
+        folders = drive_client.list_folders_in_folder(drive_id)
+        jugadores_folder_id = None
+        
+        for folder in folders:
+            if folder['name'].lower() in ['jugadores', 'players']:
+                jugadores_folder_id = folder['id']
+                break
+        
+        if not jugadores_folder_id:
+            return None
+        
+        # Crear carpeta de cache para imágenes de este equipo
+        team_images_cache_dir = DRIVE_CACHE_DIR / team_slug / "jugadores"
+        team_images_cache_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Normalizar nombre del archivo
+        normalized_name = player_name.lower()
+        
+        # Buscar en cache primero
+        cached_image_path = team_images_cache_dir / player_name
+        if cached_image_path.exists():
+            file_age_hours = (time.time() - cached_image_path.stat().st_mtime) / 3600
+            if file_age_hours < CACHE_EXPIRY_HOURS:
+                return cached_image_path
+        
+        # Si no está en cache, buscar en Google Drive
+        image_files = drive_client.list_files_in_folder(jugadores_folder_id, 'png')
+        image_files.extend(drive_client.list_files_in_folder(jugadores_folder_id, 'jpg'))
+        image_files.extend(drive_client.list_files_in_folder(jugadores_folder_id, 'jpeg'))
+        
+        # Buscar el archivo específico
+        target_file = None
+        for image_file in image_files:
+            if image_file['name'].lower() == normalized_name:
+                target_file = image_file
+                break
+        
+        if not target_file:
+            return None
+        
+        # Descargar la imagen
+        image_path = team_images_cache_dir / target_file['name']
+        success = drive_client.download_file(target_file['id'], image_path)
+        
+        if success and image_path.exists():
+            return image_path
+        
+        return None
+        
+    except Exception as e:
+        st.error(f"❌ Error obteniendo imagen del jugador {player_name} del equipo {team_name}: {str(e)}")
+        return None
+
+
 def force_sync():
     """Fuerza una sincronización completa con Google Drive"""
     try:

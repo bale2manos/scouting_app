@@ -142,10 +142,22 @@ def view_home():
     
     with col1:
         if st.button("📄 Ver Informe del Equipo", use_container_width=True, type="primary"):
+            # Establecer el equipo seleccionado para el informe
+            st.session_state['selected_team'] = {
+                'name': TEAM_NAME_DISPLAY,
+                'slug': TEAM_SLUG,
+                'drive_id': None  # Equipo principal no necesita drive_id específico
+            }
             set_route("team")
     
     with col2:
         if st.button("👥 Ver Jugadores", use_container_width=True):
+            # Establecer el equipo seleccionado para los jugadores
+            st.session_state['selected_team'] = {
+                'name': TEAM_NAME_DISPLAY,
+                'slug': TEAM_SLUG,
+                'drive_id': None  # Equipo principal no necesita drive_id específico
+            }
             set_route("players")
     
     st.markdown('</div>', unsafe_allow_html=True)

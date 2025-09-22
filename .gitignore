@@ -1,6 +1,8 @@
 # Credenciales de Google Drive (¡NO SUBIR A GIT!)
 credentials/
 *.json
+docs/USERS_MANUAL.md
+data/auth/*
 
 # Cache de archivos descargados
 cache/

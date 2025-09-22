@@ -7,11 +7,15 @@ import streamlit as st
 import base64
 from ..components import header_bar
 from ..utils import find_image_detailed, set_route
+from ..auth.db_logger import DatabaseLogger
 from ..config import TEAM_NAME_DISPLAY, TEAM_LOGO_DIR, TEAM_SLUG
 
 
 def view_team():
     """Renderiza la vista del equipo simplificada"""
+    # Registrar visualización de informe de equipo
+    auth = DatabaseLogger()
+    
     header_bar()
     
     # Obtener equipo seleccionado de session_state
@@ -20,10 +24,20 @@ def view_team():
     if selected_team:
         team_name = selected_team['name']
         team_slug = selected_team['slug']
+        # Registrar que se está viendo el informe de este equipo (solo una vez por visita)
+        team_view_key = f"team_overview_logged_{team_slug}"
+        if not st.session_state.get(team_view_key, False):
+            auth.log_report_view("team", team_name)
+            st.session_state[team_view_key] = True
     else:
         team_name = TEAM_NAME_DISPLAY
         team_slug = TEAM_SLUG
-    
+        # Registrar informe de equipo por defecto (solo una vez por visita)
+        default_team_view_key = f"default_team_overview_logged_{team_slug}"
+        if not st.session_state.get(default_team_view_key, False):
+            auth.log_report_view("team", team_name)
+            st.session_state[default_team_view_key] = True
+
     # Header con título
     st.markdown(f"""
     <div style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); 
@@ -33,31 +47,53 @@ def view_team():
                    text-shadow: 0 2px 4px rgba(0,0,0,0.3);">{team_name}</h1>
     </div>
     """, unsafe_allow_html=True)
-    
-    # Logo como imagen embebida
-    logo_tag = """
-        <div style="font-size: 4rem; opacity: 0.5;">🏀</div>
-        <div style="margin-top: 1rem; opacity: 0.7;">Escudo del equipo</div>
-    """
-    logo_path, tried = find_image_detailed(TEAM_LOGO_DIR / team_slug)
-    if logo_path:
-        try:
-            mime = "image/png" if logo_path.suffix.lower() == ".png" else "image/jpeg"
-            b64 = base64.b64encode(logo_path.read_bytes()).decode("utf-8")
-            logo_tag = f"<img src='data:{mime};base64,{b64}' alt='logo' style='width: 250px; height: auto; border-radius: 12px;'>"
-        except Exception:
-            pass
-    
-    # Layout con columnas
-    col1, col2 = st.columns([1, 1.2])
-    
+
+    # Layout de dos columnas
+    col1, col2 = st.columns([1, 2])
+
     with col1:
-        st.markdown(f"""
-        <div style="text-align: center; padding: 2rem;">
-            {logo_tag}
-        </div>
-        """, unsafe_allow_html=True)
-    
+        # Logo del equipo
+        try:
+            # Buscar el logo del equipo (find_image_detailed espera un Path sin extensión)
+            logo_base_path = TEAM_LOGO_DIR / team_slug
+            logo_path, tried_paths = find_image_detailed(logo_base_path)
+            
+            if logo_path and logo_path.exists():
+                # Mostrar logo real del equipo
+                with open(logo_path, "rb") as img_file:
+                    img_data = base64.b64encode(img_file.read()).decode()
+                
+                # Detectar tipo MIME basado en la extensión
+                ext = logo_path.suffix.lower()
+                mime_type = "image/png"
+                if ext == ".jpg" or ext == ".jpeg":
+                    mime_type = "image/jpeg"
+                elif ext == ".webp":
+                    mime_type = "image/webp"
+                
+                logo_tag = f"""
+                    <div style="text-align: center; margin-bottom: 1rem;">
+                        <img src="data:{mime_type};base64,{img_data}" 
+                             style="width: 200px; height: 200px; object-fit: contain; 
+                                    border-radius: 16px; box-shadow: 0 6px 20px rgba(0,0,0,0.25);"
+                             alt="Logo {team_name}">
+                    </div>
+                """
+                st.markdown(logo_tag, unsafe_allow_html=True)
+            else:
+                # Fallback: emoji si no se encuentra el logo
+                logo_tag = """
+                    <div style="text-align: center; font-size: 4rem; opacity: 0.5; margin-bottom: 1rem;">🏀</div>
+                """
+                st.markdown(logo_tag, unsafe_allow_html=True)
+                
+        except Exception as e:
+            # En caso de error, mostrar emoji genérico
+            logo_tag = """
+                <div style="text-align: center; font-size: 4rem; opacity: 0.5; margin-bottom: 1rem;">🏀</div>
+            """
+            st.markdown(logo_tag, unsafe_allow_html=True)
+
     with col2:
         st.markdown("<br>", unsafe_allow_html=True)
         
@@ -66,6 +102,8 @@ def view_team():
                     help="Análisis completo del equipo", 
                     use_container_width=True, 
                     type="primary"):
+            # Registrar que se está viendo el informe del equipo
+            auth.log_report_view("team", team_name)
             set_route("equipo_informe")
         
         st.markdown("<br>", unsafe_allow_html=True)
@@ -74,6 +112,8 @@ def view_team():
         if st.button("👥 VER JUGADORES", 
                     help="Ver jugadores del equipo", 
                     use_container_width=True):
+            # Registrar que se están viendo los jugadores del equipo
+            auth.log_report_view("team", f"{team_name} - Jugadores")
             set_route("players")
         
         st.markdown("<br>", unsafe_allow_html=True)
