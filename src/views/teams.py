@@ -29,6 +29,7 @@ from ..config import (
 def get_all_teams() -> List[Dict[str, Any]]:
     """
     Obtiene la lista de todos los equipos disponibles desde Google Drive.
+    Excluye PINTOBASKET ya que no es un equipo rival.
     Returns: lista de diccionarios con información de equipos
     """
     try:
@@ -40,6 +41,11 @@ def get_all_teams() -> List[Dict[str, Any]]:
         teams: List[Dict[str, Any]] = []
         for folder in folders:
             team_name = folder["name"]
+            
+            # Excluir PINTOBASKET ya que no es un equipo rival
+            if team_name.upper() == 'PINTOBASKET':
+                continue
+            
             team_slug = team_name.lower().replace(" ", "_")
             teams.append({"name": team_name, "slug": team_slug, "drive_id": folder["id"]})
 

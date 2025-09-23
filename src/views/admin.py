@@ -6,6 +6,7 @@ Vista de administración para Google Drive y gestión de usuarios
 import streamlit as st
 import pandas as pd
 from datetime import datetime
+from typing import Dict
 from ..components import header_bar
 from ..data.hybrid_loader import get_drive_status, sync_from_drive, clear_drive_cache
 from ..utils import set_route
@@ -137,8 +138,8 @@ def view_user_management():
     st.markdown("# 👥 Gestión de Usuarios")
     
     # Tabs para diferentes funciones
-    tab1, tab2, tab3 = st.tabs([
-        "📋 Lista de Usuarios", "👤 Historial Individual", "➕ Gestión"
+    tab1, tab2, tab3, tab4 = st.tabs([
+        "📋 Lista de Usuarios", "👤 Historial Individual", "🎥 Videos", "➕ Gestión"
     ])
     
     with tab1:
@@ -148,6 +149,9 @@ def view_user_management():
         _show_user_history()
     
     with tab3:
+        _show_video_stats()
+    
+    with tab4:
         _show_user_management()
 
 
@@ -543,3 +547,308 @@ def _show_user_management():
                         st.balloons()
                     else:
                         st.error(f"❌ {message}")
+
+
+def _show_video_stats():
+    """Muestra estadísticas de visualización de videos"""
+    st.markdown("### 🎥 Estadísticas de Videos")
+    
+    with st.spinner("Cargando datos de videos..."):
+        try:
+            from ..auth.db_logger import DatabaseLogger
+            logger = DatabaseLogger()
+            
+            # Obtener actividad de videos de todos los jugadores
+            players_activity = logger.get_all_players_with_video_activity()
+            
+            # Separar jugadores con y sin actividad
+            players_with_videos = {k: v for k, v in players_activity.items() if v['has_watched']}
+            players_without_videos = {k: v for k, v in players_activity.items() if not v['has_watched']}
+            
+            # Crear pestañas para diferentes vistas
+            tab_general, tab_detailed = st.tabs(["📊 Resumen", "📋 Detallado"])
+            
+            with tab_general:
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    st.metric(
+                        "� Total Jugadores", 
+                        len(players_activity),
+                        help="Total de jugadores activos en el sistema"
+                    )
+                
+                with col2:
+                    st.metric(
+                        "✅ Han visto videos", 
+                        len(players_with_videos),
+                        help="Jugadores que han visto al menos un video"
+                    )
+                
+                with col3:
+                    st.metric(
+                        "🔴 No han visto videos", 
+                        len(players_without_videos),
+                        help="Jugadores que nunca han visto videos"
+                    )
+                
+                # Mostrar progreso
+                if players_activity:
+                    progress = len(players_with_videos) / len(players_activity)
+                    st.progress(progress, text=f"Progreso de visualización: {progress:.1%}")
+                
+                # Mostrar jugadores sin actividad
+                if players_without_videos:
+                    st.warning("⚠️ **Jugadores que no han visto videos:**")
+                    
+                    # Mostrar en formato de tabla
+                    video_data = []
+                    for username, data in players_without_videos.items():
+                        video_data.append({
+                            "👤 Jugador": data['full_name'],
+                            "🏷️ Username": username,
+                            "📊 Estado": "🔴 Sin actividad"
+                        })
+                    
+                    if video_data:
+                        df_videos = pd.DataFrame(video_data)
+                        st.dataframe(
+                            df_videos,
+                            use_container_width=True,
+                            hide_index=True
+                        )
+                else:
+                    st.success("🎉 ¡Todos los jugadores han visto videos!")
+                
+                # Mostrar top jugadores más activos
+                if players_with_videos:
+                    st.markdown("#### 🏆 Jugadores Más Activos")
+                    
+                    # Ordenar por número de visualizaciones
+                    sorted_players = sorted(
+                        players_with_videos.items(), 
+                        key=lambda x: x[1]['view_count'], 
+                        reverse=True
+                    )[:5]  # Top 5
+                    
+                    for i, (username, data) in enumerate(sorted_players, 1):
+                        col_rank, col_info = st.columns([1, 4])
+                        with col_rank:
+                            st.markdown(f"**#{i}**")
+                        with col_info:
+                            last_view = data['last_view'].strftime("%d/%m/%Y") if data['last_view'] else "Nunca"
+                            st.markdown(f"**{data['full_name']}** - {data['view_count']} visualizaciones - Último: {last_view}")
+            
+            with tab_detailed:
+                st.markdown("#### 📈 Actividad Detallada por Usuario")
+                
+                if players_activity:
+                    # Crear tabla completa
+                    detailed_data = []
+                    for username, data in players_activity.items():
+                        last_view_str = data['last_view'].strftime("%d/%m/%Y %H:%M") if data['last_view'] else "Nunca"
+                        status = "✅ Activo" if data['has_watched'] else "🔴 Sin actividad"
+                        
+                        detailed_data.append({
+                            "👤 Jugador": data['full_name'],
+                            "�️ Username": username,
+                            "📊 Estado": status,
+                            "🎬 Total Visualizaciones": data['view_count'],
+                            "📂 Videos Únicos": data['unique_videos'],
+                            "🕒 Última Visualización": last_view_str
+                        })
+                    
+                    df_detailed = pd.DataFrame(detailed_data)
+                    
+                    # Filtros
+                    col_filter1, col_filter2 = st.columns(2)
+                    with col_filter1:
+                        filter_status = st.selectbox(
+                            "Filtrar por estado:",
+                            ["Todos", "Solo activos", "Solo sin actividad"]
+                        )
+                    
+                    with col_filter2:
+                        sort_by = st.selectbox(
+                            "Ordenar por:",
+                            ["Nombre", "Visualizaciones", "Última actividad"]
+                        )
+                    
+                    # Aplicar filtros
+                    filtered_df = df_detailed.copy()
+                    
+                    if filter_status == "Solo activos":
+                        filtered_df = filtered_df[filtered_df["📊 Estado"] == "✅ Activo"]
+                    elif filter_status == "Solo sin actividad":
+                        filtered_df = filtered_df[filtered_df["📊 Estado"] == "🔴 Sin actividad"]
+                    
+                    # Aplicar ordenamiento
+                    if sort_by == "Visualizaciones":
+                        filtered_df = filtered_df.sort_values("🎬 Total Visualizaciones", ascending=False)
+                    elif sort_by == "Última actividad":
+                        filtered_df = filtered_df.sort_values("🕒 Última Visualización", ascending=False)
+                    else:
+                        filtered_df = filtered_df.sort_values("👤 Jugador")
+                    
+                    st.dataframe(
+                        filtered_df,
+                        use_container_width=True,
+                        hide_index=True,
+                        column_config={
+                            "👤 Jugador": st.column_config.TextColumn("👤 Jugador", width="medium"),
+                            "🏷️ Username": st.column_config.TextColumn("🏷️ Username", width="small"),
+                            "📊 Estado": st.column_config.TextColumn("📊 Estado", width="small"),
+                            "🎬 Total Visualizaciones": st.column_config.NumberColumn("🎬 Visualizaciones", width="small"),
+                            "📂 Videos Únicos": st.column_config.NumberColumn("📂 Videos Únicos", width="small"),
+                            "🕒 Última Visualización": st.column_config.TextColumn("🕒 Última Visualización", width="medium")
+                        }
+                    )
+                    
+                    # Selector para ver detalles específicos
+                    st.markdown("---")
+                    st.markdown("#### 🔍 Detalles de Jugador Específico")
+                    
+                    player_options = {data['full_name']: username for username, data in players_activity.items()}
+                    selected_player_name = st.selectbox("Seleccionar jugador:", list(player_options.keys()))
+                    selected_username = player_options[selected_player_name]
+                    
+                    if selected_username:
+                        _show_player_video_details_db_only(selected_username, players_activity[selected_username])
+                
+        except Exception as e:
+            st.error(f"❌ Error cargando estadísticas de videos: {e}")
+            import traceback
+            st.code(traceback.format_exc())
+
+
+def _show_player_video_details_db_only(username: str, player_data: Dict):
+    """Muestra detalles de videos de un jugador usando solo datos de la base de datos"""
+    try:
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            status = "✅ Ha visto videos" if player_data['has_watched'] else "🔴 No ha visto videos"
+            st.markdown(f"**Estado:** {status}")
+        
+        with col2:
+            st.markdown(f"**Total Visualizaciones:** {player_data['view_count']}")
+        
+        with col3:
+            st.markdown(f"**Videos Únicos:** {player_data['unique_videos']}")
+        
+        if player_data['last_view']:
+            last_view_str = player_data['last_view'].strftime("%d/%m/%Y %H:%M")
+            st.markdown(f"**Última Visualización:** {last_view_str}")
+        
+        # Mostrar videos vistos
+        if player_data['video_names']:
+            st.markdown("**📂 Videos Vistos:**")
+            for video_name in player_data['video_names']:
+                st.markdown(f"- 🎬 {video_name}")
+        
+        # Mostrar historial detallado
+        st.markdown("**📊 Historial Completo:**")
+        try:
+            from ..auth.database import db_manager
+            conn = db_manager.get_connection()
+            with conn.cursor() as cursor:
+                cursor.execute("""
+                    SELECT additional_data->>'video_name' as video_name,
+                           created_at,
+                           additional_data->>'video_id' as video_id
+                    FROM activity_logs 
+                    WHERE username = %s 
+                    AND action = 'video_view' 
+                    AND log_type = 'video'
+                    AND additional_data->>'video_type' = 'user'
+                    ORDER BY created_at DESC
+                    LIMIT 20
+                """, (username,))
+                
+                views = cursor.fetchall()
+                
+                if views:
+                    for i, view in enumerate(views, 1):
+                        video_name = view[0] or "Video sin nombre"
+                        view_date = view[1].strftime("%d/%m/%Y %H:%M") if view[1] else "Fecha desconocida"
+                        st.markdown(f"{i}. 🎬 **{video_name}** - {view_date}")
+                else:
+                    st.markdown("- *No hay visualizaciones registradas*")
+                    
+        except Exception as e:
+            st.error(f"Error cargando historial detallado: {e}")
+            
+    except Exception as e:
+        st.error(f"Error mostrando detalles del jugador: {e}")
+
+
+def _show_player_video_details(username: str, logger):
+    """Muestra detalles de videos de un jugador específico"""
+    try:
+        # Verificar si tiene videos disponibles
+        has_videos = logger.user_has_videos_available(username)
+        has_watched = logger.has_user_watched_videos(username)
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            if has_videos:
+                st.success("✅ Tiene videos disponibles")
+            else:
+                st.info("ℹ️ No tiene videos en PINTOBASKET")
+        
+        with col2:
+            if has_watched:
+                st.success("✅ Ha visto videos")
+            else:
+                st.warning("⚠️ No ha visto videos")
+        
+        if has_videos:
+            # Mostrar videos disponibles
+            st.markdown("**📂 Videos Disponibles:**")
+            try:
+                from ..utils.video_manager import video_manager
+                user_videos = video_manager.get_user_videos(username)
+                
+                if user_videos:
+                    for video in user_videos:
+                        st.markdown(f"- 🎬 {video.get('name', 'Sin nombre')}")
+                else:
+                    st.markdown("- *No se encontraron videos*")
+            except Exception as e:
+                st.error(f"Error cargando videos: {e}")
+        
+        # Mostrar historial de visualizaciones
+        st.markdown("**📊 Historial de Visualizaciones:**")
+        try:
+            from ..auth.database import db_manager
+            conn = db_manager.get_connection()
+            with conn.cursor() as cursor:
+                cursor.execute("""
+                    SELECT additional_data->>'video_name' as video_name,
+                           created_at,
+                           additional_data->>'video_id' as video_id
+                    FROM activity_logs 
+                    WHERE username = %s 
+                    AND action = 'video_view' 
+                    AND log_type = 'video'
+                    AND additional_data->>'video_type' = 'user'
+                    ORDER BY created_at DESC
+                    LIMIT 10
+                """, (username,))
+                
+                views = cursor.fetchall()
+                
+                if views:
+                    for view in views:
+                        video_name = view[0] or "Video sin nombre"
+                        view_date = view[1].strftime("%d/%m/%Y %H:%M") if view[1] else "Fecha desconocida"
+                        st.markdown(f"- 🎬 **{video_name}** - {view_date}")
+                else:
+                    st.markdown("- *No hay visualizaciones registradas*")
+                    
+        except Exception as e:
+            st.error(f"Error cargando historial: {e}")
+            
+    except Exception as e:
+        st.error(f"Error mostrando detalles del jugador: {e}")

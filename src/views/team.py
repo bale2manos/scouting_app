@@ -108,8 +108,27 @@ def view_team():
         
         st.markdown("<br>", unsafe_allow_html=True)
         
+        # Botón VER VIDEOS DEL EQUIPO
+        from ..utils.video_manager import video_manager
+        team_videos = video_manager.get_team_videos(team_name)
+        has_team_videos = len(team_videos) > 0
+        
+        if st.button("🎥 VER VIDEOS DEL EQUIPO", 
+                    help="Videos de análisis del equipo" if has_team_videos else "No hay videos disponibles", 
+                    use_container_width=True,
+                    disabled=not has_team_videos):
+            if has_team_videos:
+                # Configurar contexto para mostrar videos del equipo
+                st.session_state['video_context'] = {
+                    'type': 'team',
+                    'team_name': team_name
+                }
+                set_route("videos")
+        
+        st.markdown("<br>", unsafe_allow_html=True)
+        
         # Botón VER JUGADORES
-        if st.button("👥 VER JUGADORES", 
+        if st.button("� VER JUGADORES", 
                     help="Ver jugadores del equipo", 
                     use_container_width=True):
             # Registrar que se están viendo los jugadores del equipo
@@ -117,9 +136,3 @@ def view_team():
             set_route("players")
         
         st.markdown("<br>", unsafe_allow_html=True)
-        
-        # Botón VOLVER A EQUIPOS
-        if st.button("🔙 VOLVER A EQUIPOS", 
-                    help="Regresar a la lista de equipos", 
-                    use_container_width=True):
-            set_route("teams")

@@ -14,6 +14,7 @@ from .ui import (
     go_back,
     back_button
 )
+from .video_manager import video_manager
 
 __all__ = [
     'set_route',
@@ -24,5 +25,6 @@ __all__ = [
     'big_card',
     'apply_styles',
     'go_back',
-    'back_button'
+    'back_button',
+    'video_manager'
 ]

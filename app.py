@@ -20,6 +20,7 @@ from src.views import (
     is_app_ready
 )
 from src.views.admin import view_user_management
+from src.views.videos import view_videos, view_log_videos
 from src.utils import set_route
 from src.data.drive_loader import auto_sync_on_load, debug_player_files, force_sync
 
@@ -157,6 +158,11 @@ def main():
         view_players()
     elif route == "jugador_informe":
         view_jugador_informe()
+    elif route == "videos":
+        view_videos()
+    elif route == "log_videos" and auth.get_user_role() in ["admin", "coach"]:
+        # Vista de log de videos para admins y coaches
+        view_log_videos()
     elif route == "stats" and auth.get_user_role() == "admin":
         # Panel de estadísticas solo para admins
         from src.auth.stats import StatsManager

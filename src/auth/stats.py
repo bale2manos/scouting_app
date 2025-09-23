@@ -345,9 +345,17 @@ class StatsManager:
                 users = [row[0] for row in cursor.fetchall()]
                 
                 if users:
+                    # Selector de usuario con paginación
+                    page_size = 10
+                    total_pages = (len(users) + page_size - 1) // page_size
+                    page = st.number_input("Página:", min_value=1, max_value=total_pages, step=1, value=1)
+                    start_idx = (page - 1) * page_size
+                    end_idx = start_idx + page_size
+                    paginated_users = users[start_idx:end_idx]
+
                     selected_user = st.selectbox(
                         "👤 Seleccionar usuario para análisis:",
-                        ["Todos"] + users
+                        ["Todos"] + paginated_users
                     )
                     
                     if selected_user != "Todos":

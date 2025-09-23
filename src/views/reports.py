@@ -10,6 +10,7 @@ from ..utils import embed_pdf_local, download_button_for_pdf, player_label, set_
 from ..auth.db_logger import DatabaseLogger
 from ..config import TEAM_SLUG, PLAYER_REPORTS_DIR, GENERIC_USER_IMAGE, TEAM_NAME_DISPLAY
 from ..data.drive_loader import load_players, get_team_report_path
+from pathlib import Path
 
 
 def view_equipo_informe():
@@ -204,7 +205,65 @@ def view_jugador_informe():
             st.button("📄 Descargar informe", use_container_width=True, disabled=True, help="Informe no disponible")
     
     with col2:
-        st.button("🎬 Ver vídeos", use_container_width=True, disabled=True, help="Funcionalidad próximamente disponible")
+        # Botón Ver Videos del jugador rival
+        from ..utils.video_manager import video_manager
+        
+        # Determinar si hay video para este jugador
+        has_player_video = False
+        if selected_team and team_name:
+            # Para jugadores rivales, buscar video en jugadores/NOMBRE.mp4
+            # Usar el nombre real del archivo de informe
+            player_video_filename = None
+            files_in_folder = video_manager._list_files_in_folder(video_manager._get_subfolder_id(video_manager._get_folder_id(team_name), 'jugadores'))
+            # Buscar el archivo de video en la carpeta jugadores que corresponda a este jugador
+            player_video_filename = None
+            # Detectar si el png está en mayúsculas
+            png_names = [f['name'] for f in files_in_folder if f['name'].endswith('.png')]
+            png_upper = any(name == name.upper() for name in png_names)
+            if png_upper:
+                player_full_name = player.get('name', '').replace(' ', '_').upper() + "_" + player.get('surnames', '').replace(' ', '_').upper()
+            else:
+                player_full_name = player.get('name', '').replace(' ', '_').lower() + "_" + player.get('surnames', '').replace(' ', '_').lower()
+            video_extensions = ['.mp4', '.mov', '.avi', '.mkv', '.webm', '.m4v']
+            for ext in video_extensions:
+                for f in files_in_folder:
+                    compare_name = Path(f['name']).stem
+                    if png_upper:
+                        compare_name = compare_name.upper()
+                    else:
+                        compare_name = compare_name.lower()
+                    if f['name'].endswith(ext) and compare_name == player_full_name:
+                        player_video_filename = f['name']
+                        break
+                if player_video_filename:
+                    break
+            # Si no se encuentra, usar el slug por defecto con extensión mp4
+            if not player_video_filename:
+                player_video_filename = f"{player_slug}.mp4"
+
+            # Buscar el archivo png que corresponde al jugador actual
+            player_png = next((f['name'] for f in files_in_folder if f['name'].endswith('.png') and player_full_name in Path(f['name']).stem.upper()), None)
+
+            # Preferimos usar el nombre real del informe (png) como referencia
+            # para buscar el video; si no existe, usamos el candidate encontrado.
+            lookup_name = player_png if player_png else player_video_filename
+
+            player_video = video_manager.get_player_video(team_name, lookup_name)
+            has_player_video = player_video is not None
+        if st.button("🎬 Ver vídeos", 
+                    use_container_width=True, 
+                    disabled=not has_player_video,
+                    help="Video de análisis del jugador" if has_player_video else "No hay videos disponibles"):
+            if has_player_video:
+                # Configurar contexto para mostrar video del jugador rival
+                # Pasamos como 'player_name' el nombre de archivo de informe (lookup_name)
+                # para que el video_manager haga la búsqueda case-insensitive en MAYÚSCULAS.
+                st.session_state['video_context'] = {
+                    'type': 'team_player',
+                    'team_name': team_name,
+                    'player_name': lookup_name
+                }
+                set_route("videos")
     
     st.markdown("---")
     

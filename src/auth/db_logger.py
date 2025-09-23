@@ -400,6 +400,231 @@ class DatabaseLogger:
             print(f"Error obteniendo actividad reciente: {e}")
             return []
     
+    def log_video_view(self, username: str, video_name: str, video_type: str, video_details: Dict = None) -> bool:
+        """
+        Registra la visualización de un video
+        
+        Args:
+            username: Usuario que ve el video
+            video_name: Nombre del archivo de video
+            video_type: Tipo de video (team, team_player, user)
+            video_details: Detalles adicionales del video (team_name, player_name, etc.)
+        """
+        try:
+            # Para videos, permitir múltiples registros pero evitar spam reciente
+            import time
+            current_time = time.time()
+            
+            session_key = f"{self.session_prefix}video_{video_name}_{username}"
+            last_log_key = f"{session_key}_last_time"
+            
+            try:
+                last_log_time = st.session_state.get(last_log_key, 0)
+                if current_time - last_log_time < 10:  # 10 segundos de cooldown para videos
+                    return True  # Registrado recientemente
+                
+                st.session_state[last_log_key] = current_time
+            except Exception:
+                # Si hay problemas con session_state, continuar con el logging
+                pass
+            
+            conn = db_manager.get_connection()
+            
+            # Preparar datos adicionales
+            extra_data = video_details or {}
+            extra_data.update({
+                'video_name': video_name,
+                'video_type': video_type,
+                'timestamp': datetime.now().isoformat()
+            })
+            
+            with conn.cursor() as cursor:
+                cursor.execute("""
+                    INSERT INTO activity_logs (username, action, log_type, success, additional_data)
+                    VALUES (%s, %s, %s, %s, %s)
+                """, (username, 'video_view', 'video', True, json.dumps(extra_data, ensure_ascii=False)))
+            
+            conn.commit()
+            db_logger.info(f"Video view registrado: {username} vio {video_name}")
+            return True
+            
+        except Exception as e:
+            db_logger.error(f"Error registrando visualización de video para {username}: {e}")
+            return False
+    
+    def has_user_watched_videos(self, username: str) -> bool:
+        """
+        Verifica si el usuario ha visto alguno de sus videos de PINTOBASKET
+        
+        Args:
+            username: Usuario a verificar
+            
+        Returns:
+            True si ha visto al menos un video, False si no
+        """
+        try:
+            conn = db_manager.get_connection()
+            
+            with conn.cursor() as cursor:
+                cursor.execute("""
+                    SELECT COUNT(*) 
+                    FROM activity_logs 
+                    WHERE username = %s 
+                    AND action = 'video_view' 
+                    AND log_type = 'video'
+                    AND additional_data->>'video_type' = 'user'
+                """, (username,))
+                
+                result = cursor.fetchone()
+                if result and len(result) > 0:
+                    count = result[0] if result[0] is not None else 0
+                    return count > 0
+                return False
+                
+        except Exception as e:
+            print(f"Error verificando videos vistos para {username}: {e}")
+            return False
+    
+    def get_users_without_video_views(self) -> List[str]:
+        """
+        Obtiene lista de usuarios que nunca han visto sus videos de PINTOBASKET
+        Solo incluye usuarios que realmente tienen videos disponibles
+        
+        Returns:
+            Lista de usernames que no han visto videos
+        """
+        try:
+            # Obtener todos los usuarios de tipo player
+            from .database import db_manager
+            conn = db_manager.get_connection()
+            
+            with conn.cursor() as cursor:
+                # Obtener todos los jugadores activos
+                cursor.execute("""
+                    SELECT username 
+                    FROM users 
+                    WHERE role = 'player' AND is_active = true
+                """)
+                
+                all_players = [row[0] for row in cursor.fetchall()]
+                
+                # Verificar cuáles tienen videos y no los han visto
+                players_without_views = []
+                for player in all_players:
+                    # Primero verificar si tiene videos disponibles
+                    if self.user_has_videos_available(player):
+                        # Solo entonces verificar si los ha visto
+                        if not self.has_user_watched_videos(player):
+                            players_without_views.append(player)
+                
+                return players_without_views
+                
+        except Exception as e:
+            print(f"Error obteniendo usuarios sin visualizaciones: {e}")
+            return []
+    
+    def get_all_players_with_video_activity(self) -> Dict[str, Dict]:
+        """
+        Obtiene información de actividad de videos para todos los jugadores
+        Funciona solo con datos de la base de datos, sin depender de Google Drive
+        
+        Returns:
+            Dict con información de cada jugador: {username: {has_watched: bool, video_count: int, last_view: datetime}}
+        """
+        try:
+            from .database import db_manager
+            conn = db_manager.get_connection()
+            
+            result = {}
+            
+            with conn.cursor() as cursor:
+                # Obtener todos los jugadores activos
+                cursor.execute("""
+                    SELECT username, full_name 
+                    FROM users 
+                    WHERE role = 'player' AND is_active = true
+                """)
+                
+                all_players = cursor.fetchall()
+                
+                for username, full_name in all_players:
+                    # Contar visualizaciones de videos
+                    cursor.execute("""
+                        SELECT COUNT(*) as view_count,
+                               MAX(created_at) as last_view
+                        FROM activity_logs 
+                        WHERE username = %s 
+                        AND action = 'video_view' 
+                        AND log_type = 'video'
+                        AND additional_data->>'video_type' = 'user'
+                    """, (username,))
+                    
+                    view_data = cursor.fetchone()
+                    view_count = view_data[0] if view_data and view_data[0] else 0
+                    last_view = view_data[1] if view_data and view_data[1] else None
+                    
+                    # Obtener videos únicos vistos
+                    cursor.execute("""
+                        SELECT DISTINCT additional_data->>'video_name' as video_name
+                        FROM activity_logs 
+                        WHERE username = %s 
+                        AND action = 'video_view' 
+                        AND log_type = 'video'
+                        AND additional_data->>'video_type' = 'user'
+                        AND additional_data->>'video_name' IS NOT NULL
+                    """, (username,))
+                    
+                    unique_videos = [row[0] for row in cursor.fetchall() if row[0]]
+                    
+                    result[username] = {
+                        'full_name': full_name,
+                        'has_watched': view_count > 0,
+                        'view_count': view_count,
+                        'unique_videos': len(unique_videos),
+                        'video_names': unique_videos,
+                        'last_view': last_view
+                    }
+                
+                return result
+                
+        except Exception as e:
+            print(f"Error obteniendo actividad de videos: {e}")
+            return {}
+    
+    def user_has_videos_available(self, username: str) -> bool:
+        """
+        Verifica si un usuario tiene videos disponibles en PINTOBASKET
+        
+        Args:
+            username: Usuario a verificar
+            
+        Returns:
+            True si tiene videos disponibles, False si no (o si no se puede verificar)
+        """
+        try:
+            # Import local para evitar circular imports
+            import sys
+            import os
+            
+            # Agregar la ruta del proyecto al path si no está
+            project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+            if project_root not in sys.path:
+                sys.path.insert(0, project_root)
+            
+            from src.utils.video_manager import video_manager
+            
+            # Verificar si Google Drive está autenticado
+            if not video_manager.drive_client.is_authenticated():
+                # Si no está autenticado, asumir que no hay videos disponibles
+                # para evitar mostrar notificaciones falsas
+                return False
+            
+            user_videos = video_manager.get_user_videos(username)
+            return len(user_videos) > 0
+        except Exception as e:
+            print(f"Error verificando videos disponibles para {username}: {e}")
+            return False
+    
     def clear_session_logs(self):
         """Limpia los logs de la sesión actual (para testing o reset)"""
         keys_to_remove = [key for key in st.session_state.keys() 

@@ -52,13 +52,36 @@ def show_user_menu(auth, current_user):
     with st.container():
         st.markdown("---")
         
-        # Solo mostrar botones, sin información del usuario
+        # Solo admins ven estadísticas en su propia fila
+        if current_user.get('role') == 'admin':
+            if st.button("📊 Estadísticas", use_container_width=True, key="menu_stats"):
+                set_route("stats")
+                st.session_state['show_user_menu'] = False
+                st.rerun()
+        
+        # Fila principal: Videos y Logout lado a lado
         col1, col2 = st.columns(2)
         
         with col1:
-            if current_user.get('role') == 'admin':
-                if st.button("📊 Estadísticas", use_container_width=True, key="menu_stats"):
-                    set_route("stats")
+            # Verificar el rol del usuario para mostrar botón apropiado
+            username = current_user.get('username', '')
+            user_role = current_user.get('role', '')
+            
+            if user_role in ['admin', 'coach']:
+                # Para admins y coaches: mostrar botón "Log Videos"
+                if st.button("📊 Log Videos", use_container_width=True, key="menu_log_videos"):
+                    set_route("log_videos")
+                    st.session_state['show_user_menu'] = False
+                    st.rerun()
+            else:
+                # Botón estándar para jugadores
+                if st.button("🎥 Mis Videos", use_container_width=True, key="menu_my_videos"):
+                    # Configurar contexto para mostrar videos del usuario
+                    st.session_state['video_context'] = {
+                        'type': 'user',
+                        'username': username
+                    }
+                    set_route("videos")
                     st.session_state['show_user_menu'] = False
                     st.rerun()
         
