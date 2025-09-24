@@ -15,11 +15,13 @@ Esta guía explica dónde subir los videos, cómo nombrarlos, qué formatos son 
   - Subir a la carpeta raíz `PINTOBASKET/`.
   - Nombre recomendado: `{username}.mp4` (ej.: `david_sanchez.mp4`).
   - Los videos con este nombre se mostrarán automáticamente en la sección "Mis Videos" del usuario cuyo `username` coincida con el nombre del archivo.
+
 - Videos compartidos para **todos los jugadores PINTOBASKET**:
 
   - Subir a la subcarpeta `PINTOBASKET/videos/`.
   - Nombres recomendados: descriptivos con `_` como separador (ej.: `off_pinto.mp4`, `deff_pinto.mp4`, `mejores_goles_de_cr7.mp4`).
   - Estos videos aparecerán en la sección "Videos compartidos" de la vista "Mis Videos" y estarán disponibles para todos los jugadores/entrenadores.
+
 - Videos por equipo y por jugador (equipos rivales):
 
   - Cada **equipo rival** tiene una carpeta principal (nombre del equipo). Dentro tiene las subcarpetas:
@@ -51,6 +53,7 @@ Recomendaciones:
 
   - Pueden ver todos los videos de equipos rivales (`team/videos` y `team/jugadores`).
   - Pueden ver los videos compartidos de `PINTOBASKET/videos` y los videos personales de usuarios si tienen permisos administrativos.
+
 - Jugadores (usuarios PINTOBASKET):
 
   - Ven sus propios videos personales (archivos en `PINTOBASKET/` que coincidan con su username).
