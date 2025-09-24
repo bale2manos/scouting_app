@@ -174,21 +174,54 @@ class VideoManager:
             
             # Listar archivos de video
             files = self._list_files_in_folder(pintobasket_folder_id)
-            
-            # Filtrar videos que correspondan al usuario
-            user_videos = []
+
+            # Filtrar videos que correspondan al usuario (personales)
+            user_videos: List[Dict] = []
             for file in files:
                 if self._is_video_file(file['name']):
-                    # Verificar si el nombre del archivo coincide con el username
                     file_name = Path(file['name']).stem.lower()
                     if username.lower() == file_name:
                         file['type'] = 'user'
                         file['username'] = username
+                        file['shared'] = False
                         file['url'] = f"https://drive.google.com/file/d/{file['id']}/view"
                         file['embed_url'] = f"https://drive.google.com/file/d/{file['id']}/preview"
+                        # Pretty title from filename
+                        file['pretty_name'] = Path(file['name']).stem.replace('_', ' ').title()
                         user_videos.append(file)
-            
-            return user_videos
+
+            # Buscar videos compartidos en la subcarpeta PINTOBASKET/videos
+            shared_videos: List[Dict] = []
+            try:
+                shared_folder_id = self._get_subfolder_id(pintobasket_folder_id, 'videos')
+                if shared_folder_id:
+                    shared_files = self._list_files_in_folder(shared_folder_id)
+                    for sf in shared_files:
+                        if self._is_video_file(sf['name']):
+                            sf['type'] = 'user_shared'
+                            sf['shared'] = True
+                            sf['username'] = None
+                            sf['url'] = f"https://drive.google.com/file/d/{sf['id']}/view"
+                            sf['embed_url'] = f"https://drive.google.com/file/d/{sf['id']}/preview"
+                            sf['pretty_name'] = Path(sf['name']).stem.replace('_', ' ').title()
+                            shared_videos.append(sf)
+            except Exception:
+                # Si falla la subcarpeta, continuar con videos personales
+                shared_videos = []
+
+            # Unir listas: personales primero, luego compartidos; ordenar por modifiedTime desc si disponible
+            all_videos = user_videos + shared_videos
+            def _sort_key(v: Dict):
+                return v.get('modifiedTime') or v.get('createdTime') or v.get('name')
+
+            try:
+                # Si modifiedTime es ISO, invertir para descendente
+                all_videos.sort(key=lambda v: _sort_key(v), reverse=True)
+            except Exception:
+                # Fallback al orden natural
+                pass
+
+            return all_videos
             
         except Exception as e:
             logger.error(f"Error obteniendo videos del usuario {username}: {e}")
