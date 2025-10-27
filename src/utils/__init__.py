@@ -15,6 +15,11 @@ from .ui import (
     back_button
 )
 from .video_manager import video_manager
+from .player_classification import (
+    PlayerClassificationManager,
+    can_classify_players,
+    CLASSIFICATION_TYPES
+)
 
 __all__ = [
     'set_route',
@@ -26,5 +31,8 @@ __all__ = [
     'apply_styles',
     'go_back',
     'back_button',
-    'video_manager'
+    'video_manager',
+    'PlayerClassificationManager',
+    'can_classify_players',
+    'CLASSIFICATION_TYPES'
 ]

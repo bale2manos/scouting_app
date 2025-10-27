@@ -1,0 +1,26 @@
+{
+  "_comment": "Clasificación de jugadores por equipo (interiores/exteriores)",
+  "_structure": {
+    "team_slug": {
+      "player_slug": "exterior | interior"
+    }
+  },
+  "test_team": {
+    "jugador_1": "exterior",
+    "jugador_2": "interior",
+    "jugador_3": "exterior",
+    "jugador_4": "interior",
+    "jugador_5": "exterior"
+  },
+  "baloncesto_talavera": {
+    "vicente_viana_aitor_vanzziller": "interior",
+    "gueye_bassirou": "interior",
+    "unanue_cegarra_carlos": "exterior",
+    "lorenzo_negrete_daniel": "exterior",
+    "alonso_pascual_victor": "exterior",
+    "klotz_maroto_conrad": "exterior",
+    "gacic_sandro": "interior",
+    "aboubacar_hima_seydou": "interior",
+    "baldan_martín_marco": "exterior"
+  }
+}

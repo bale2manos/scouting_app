@@ -114,24 +114,25 @@ class DatabaseAuthenticator:
                     # Login exitoso
                     token = self._generate_session_token(username)
                     
-                    # Guardar sesión en base de datos
-                    self._save_session(username, token)
-                    
-                    # Guardar en session_state de Streamlit
-                    st.session_state["authenticated"] = True
-                    st.session_state["username"] = username
-                    st.session_state["session_token"] = token
-                    
-                    # Log del login exitoso
-                    self.logger.log_access(username, "login", True)
-                    
-                    # Devolver datos del usuario
+                    # Preparar datos del usuario
                     user_data = {
                         "username": username,
                         "full_name": full_name,
                         "role": role,
                         "is_active": is_active
                     }
+                    
+                    # Guardar sesión en base de datos
+                    self._save_session(username, token)
+                    
+                    # Guardar en session_state de Streamlit
+                    st.session_state["authenticated"] = True
+                    st.session_state["username"] = username
+                    st.session_state["user"] = user_data  # IMPORTANTE: Guardar user_data completo
+                    st.session_state["session_token"] = token
+                    
+                    # Log del login exitoso
+                    self.logger.log_access(username, "login", True)
                     
                     return True, user_data, None
                 else:
