@@ -18,9 +18,9 @@ TEAM_SLUG = "c_d_mensajero_isla_de_la_palma"           # para rutas (minúsculas
 # ==============================
 
 # Variables configurables para la página de inicio
-NEXT_MATCH_DATE = "01/11/2024"  # Fecha del próximo partido (formato DD/MM/YYYY)
-LEAGUE_POSITION = "11º"          # Posición en la liga
-WINS_LOSSES = "2-2"           # Victorias-Derrotas
+NEXT_MATCH_DATE = "08/11/2024"  # Fecha del próximo partido (formato DD/MM/YYYY)
+LEAGUE_POSITION = "9º"          # Posición en la liga
+WINS_LOSSES = "2-3"           # Victorias-Derrotas
 
 
 # ==============================
