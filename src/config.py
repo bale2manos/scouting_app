@@ -9,8 +9,8 @@ from pathlib import Path
 # ======= CONFIG BÁSICA ========
 # ==============================
 
-TEAM_NAME_DISPLAY = "BALONCESTO TALAVERA"   # texto visible
-TEAM_SLUG = "baloncesto_talavera"           # para rutas (minúsculas + _)
+TEAM_NAME_DISPLAY = "C D MENSAJERO ISLA DE LA PALMA"   # texto visible
+TEAM_SLUG = "c_d_mensajero_isla_de_la_palma"           # para rutas (minúsculas + _)
 
 
 # ==============================
