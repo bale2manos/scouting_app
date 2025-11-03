@@ -21,6 +21,7 @@ from ..data.drive_loader import load_players, get_player_image_path
 def view_players():
     """Renderiza la vista de jugadores desde Google Drive"""
     from ..data.drive_loader import load_players_by_drive_id
+    from ..utils.google_drive import get_drive_client
     
     header_bar()
     
@@ -35,16 +36,14 @@ def view_players():
         # Encabezado
         st.markdown(f"## {team_name}")
         
-        # Verificar si es el equipo principal configurado
-        if (team_name.upper() == TEAM_NAME_DISPLAY.upper() or 
-            team_slug == TEAM_SLUG or 
-            drive_id is None):
-            # Es el equipo principal, usar la función existente
-            players = load_players()
-        else:
-            # Es otro equipo, usar la nueva función dinámica
+        # Si tiene drive_id específico, usar la función dinámica
+        if drive_id and drive_id != "None" and drive_id.strip():
+            # Equipo con drive_id específico, usar función dinámica
             with st.spinner(f"Cargando jugadores de {team_name} desde Google Drive..."):
                 players = load_players_by_drive_id(team_name, team_slug, drive_id)
+        else:
+            # Sin drive_id específico, usar función por defecto
+            players = load_players()
                 
     else:
         # Sin equipo seleccionado, usar configuración por defecto
@@ -54,7 +53,119 @@ def view_players():
         players = load_players()
     
     if not players:
-        st.info("No se encontraron jugadores para este equipo.")
+        st.warning(f"⚠️ **No se encontraron jugadores para el equipo: {team_name}**")
+        
+        # Información de diagnóstico
+        with st.expander("🔍 Información de diagnóstico (haz clic para expandir)", expanded=True):
+            st.markdown("### 🔍 Diagnóstico del problema:")
+            
+            # Mostrar información de rutas
+            from ..config import DRIVE_CACHE_DIR
+            cache_path = DRIVE_CACHE_DIR / team_slug / "jugadores"
+            st.code(f"Ruta de caché local esperada:\n{cache_path.absolute()}", language="text")
+            
+            if cache_path.exists():
+                st.success(f"✅ La carpeta de caché existe")
+                # Listar archivos en cache
+                cached_files = list(cache_path.glob("*.*"))
+                if cached_files:
+                    st.info(f"📂 {len(cached_files)} archivo(s) en caché local:")
+                    for f in cached_files[:10]:
+                        st.write(f"  - {f.name}")
+                    if len(cached_files) > 10:
+                        st.write(f"  ... y {len(cached_files) - 10} más")
+                else:
+                    st.warning("⚠️ La carpeta de caché existe pero está vacía")
+            else:
+                st.warning(f"⚠️ La carpeta de caché no existe aún")
+            
+            st.markdown("---")
+            
+            # Verificar conexión a Google Drive
+            drive_client = get_drive_client()
+            if not drive_client or not drive_client.is_authenticated():
+                st.error("❌ **No hay conexión con Google Drive**")
+                st.info("El sistema no puede acceder a Google Drive. Verifica las credenciales.")
+            else:
+                st.success("✅ **Conexión con Google Drive OK**")
+                
+                # Verificar carpeta del equipo
+                if selected_team and drive_id:
+                    st.info(f"📁 **ID de carpeta del equipo en Drive:** `{drive_id}`")
+                    st.code(f"URL de Drive:\nhttps://drive.google.com/drive/folders/{drive_id}", language="text")
+                    
+                    # Intentar listar carpetas dentro del equipo
+                    try:
+                        folders = drive_client.list_folders_in_folder(drive_id)
+                        st.write(f"📂 **Carpetas encontradas en el equipo ({len(folders)}):**")
+                        
+                        jugadores_folder_found = False
+                        jugadores_folder_id = None
+                        for folder in folders:
+                            folder_name = folder['name']
+                            if folder_name.lower() in ['jugadores', 'players']:
+                                st.success(f"✅ Carpeta '{folder_name}' encontrada")
+                                st.code(f"ID de carpeta jugadores: {folder['id']}\nURL: https://drive.google.com/drive/folders/{folder['id']}", language="text")
+                                jugadores_folder_found = True
+                                jugadores_folder_id = folder['id']
+                                
+                                # Verificar archivos dentro de jugadores
+                                try:
+                                    all_files = []
+                                    for ext in ['png', 'jpg', 'jpeg']:
+                                        files = drive_client.list_files_in_folder(folder['id'], ext)
+                                        all_files.extend(files)
+                                    
+                                    if all_files:
+                                        st.success(f"✅ **{len(all_files)} imágenes encontradas en la carpeta de jugadores**")
+                                        st.write("📸 **Imágenes encontradas:**")
+                                        for img in all_files[:10]:
+                                            st.write(f"  - `{img['name']}` (ID: {img['id']})")
+                                        if len(all_files) > 10:
+                                            st.write(f"  ... y {len(all_files) - 10} más")
+                                        
+                                        st.markdown("---")
+                                        st.warning("⚠️ **Las imágenes están en Drive pero no se pudieron cargar como jugadores**")
+                                        st.info("💡 Posibles causas:\n"
+                                               "- Los nombres de archivo no coinciden con el formato esperado\n"
+                                               "- No hay información en el archivo Excel para estos jugadores\n"
+                                               "- Error al descargar las imágenes al caché local")
+                                    else:
+                                        st.error("❌ **No hay imágenes en la carpeta de jugadores**")
+                                        st.info("💡 Asegúrate de subir imágenes de jugadores (formato PNG, JPG o JPEG) a la carpeta 'jugadores' en Google Drive.")
+                                except Exception as e:
+                                    st.error(f"❌ Error al leer archivos de la carpeta jugadores: {str(e)}")
+                            else:
+                                st.write(f"  - 📁 {folder_name} (ID: `{folder['id']}`)")
+                        
+                        if not jugadores_folder_found:
+                            st.error("❌ **No se encontró la carpeta 'jugadores' o 'players'**")
+                            st.info("💡 Crea una carpeta llamada 'jugadores' dentro de la carpeta del equipo en Google Drive y sube las imágenes allí.")
+                    
+                    except Exception as e:
+                        st.error(f"❌ Error al acceder a la carpeta del equipo: {str(e)}")
+                else:
+                    st.info("📁 Usando configuración por defecto del equipo principal")
+            
+            st.markdown("---")
+            st.markdown("""
+            ### 📝 Formato esperado:
+            
+            **Estructura en Google Drive:**
+            ```
+            📁 [Carpeta del Equipo]
+               └── 📁 jugadores/
+                   ├── 🖼️ APELLIDO1_APELLIDO2_N.png
+                   ├── 🖼️ GARCIA_LOPEZ_J.jpg
+                   └── 🖼️ MARTINEZ_P.png
+            ```
+            
+            **Importante:**
+            - Las imágenes deben estar en formato PNG, JPG o JPEG
+            - Los nombres de archivo deben seguir el patrón: `APELLIDO_NOMBRE.extension`
+            - La carpeta debe llamarse exactamente "jugadores" o "players"
+            """)
+        
         return
 
     # ===== BOTÓN DE CLASIFICACIÓN (solo para admin/coach) =====

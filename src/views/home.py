@@ -142,21 +142,51 @@ def view_home():
     
     with col1:
         if st.button("📄 Ver Informe del Equipo", use_container_width=True, type="primary"):
-            # Establecer el equipo seleccionado para el informe
+            # Buscar el drive_id específico del equipo principal
+            from ..utils.google_drive import get_drive_client
+            from ..config import GOOGLE_DRIVE_ROOT_FOLDER_ID
+            
+            team_drive_id = None
+            try:
+                drive_client = get_drive_client()
+                if drive_client and drive_client.is_authenticated():
+                    folders = drive_client.list_folders_in_folder(GOOGLE_DRIVE_ROOT_FOLDER_ID)
+                    for folder in folders:
+                        if folder['name'].upper() == TEAM_NAME_DISPLAY.upper():
+                            team_drive_id = folder['id']
+                            break
+            except:
+                pass
+            
             st.session_state['selected_team'] = {
                 'name': TEAM_NAME_DISPLAY,
                 'slug': TEAM_SLUG,
-                'drive_id': None  # Equipo principal no necesita drive_id específico
+                'drive_id': team_drive_id  # Usar el drive_id de la carpeta específica del equipo
             }
             set_route("team")
     
     with col2:
         if st.button("👥 Ver Jugadores", use_container_width=True):
-            # Establecer el equipo seleccionado para los jugadores
+            # Buscar el drive_id específico del equipo principal
+            from ..utils.google_drive import get_drive_client
+            from ..config import GOOGLE_DRIVE_ROOT_FOLDER_ID
+            
+            team_drive_id = None
+            try:
+                drive_client = get_drive_client()
+                if drive_client and drive_client.is_authenticated():
+                    folders = drive_client.list_folders_in_folder(GOOGLE_DRIVE_ROOT_FOLDER_ID)
+                    for folder in folders:
+                        if folder['name'].upper() == TEAM_NAME_DISPLAY.upper():
+                            team_drive_id = folder['id']
+                            break
+            except:
+                pass
+            
             st.session_state['selected_team'] = {
                 'name': TEAM_NAME_DISPLAY,
                 'slug': TEAM_SLUG,
-                'drive_id': None  # Equipo principal no necesita drive_id específico
+                'drive_id': team_drive_id  # Usar el drive_id de la carpeta específica del equipo
             }
             set_route("players")
     

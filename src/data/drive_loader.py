@@ -816,31 +816,47 @@ def load_players_by_drive_id(team_name: str, team_slug: str, drive_id: str) -> L
         team_images_cache_dir = DRIVE_CACHE_DIR / team_slug / "jugadores"
         team_images_cache_dir.mkdir(parents=True, exist_ok=True)
         
-        # Obtener lista de archivos de imagen en la carpeta de jugadores
+        # Obtener lista de archivos de imagen en la carpeta de jugadores desde Drive
         image_files = drive_client.list_files_in_folder(jugadores_folder_id, 'png')
         image_files.extend(drive_client.list_files_in_folder(jugadores_folder_id, 'jpg'))
         image_files.extend(drive_client.list_files_in_folder(jugadores_folder_id, 'jpeg'))
         
+        # IMPORTANTE: Si no hay archivos en Drive, intentar usar el caché local
         if not image_files:
-            return []
-        
-        # Descargar imágenes que no estén en cache
-        available_images = {}
-        for image_file in image_files:
-            image_filename = image_file['name']
-            cached_image_path = team_images_cache_dir / image_filename
+            # Buscar imágenes en caché local
+            cached_images = []
+            if team_images_cache_dir.exists():
+                for ext in ['*.png', '*.jpg', '*.jpeg']:
+                    cached_images.extend(list(team_images_cache_dir.glob(ext)))
             
-            # Verificar si la imagen está en cache y es válida
-            if cached_image_path.exists():
-                file_age_hours = (time.time() - cached_image_path.stat().st_mtime) / 3600
-                if file_age_hours < CACHE_EXPIRY_HOURS:
+            if not cached_images:
+                return []
+            
+            # Usar solo imágenes del caché local
+            available_images = {}
+            for cached_path in cached_images:
+                # Verificar que el archivo no esté muy antiguo
+                file_age_hours = (time.time() - cached_path.stat().st_mtime) / 3600
+                if file_age_hours < CACHE_EXPIRY_HOURS * 7:  # Cache más largo para equipos externos
+                    available_images[cached_path.name] = cached_path
+        else:
+            # Descargar imágenes que no estén en cache
+            available_images = {}
+            for image_file in image_files:
+                image_filename = image_file['name']
+                cached_image_path = team_images_cache_dir / image_filename
+                
+                # Verificar si la imagen está en cache y es válida
+                if cached_image_path.exists():
+                    file_age_hours = (time.time() - cached_image_path.stat().st_mtime) / 3600
+                    if file_age_hours < CACHE_EXPIRY_HOURS:
+                        available_images[image_filename] = cached_image_path
+                        continue
+                
+                # Descargar imagen
+                success = drive_client.download_file(image_file['id'], cached_image_path)
+                if success:
                     available_images[image_filename] = cached_image_path
-                    continue
-            
-            # Descargar imagen
-            success = drive_client.download_file(image_file['id'], cached_image_path)
-            if success:
-                available_images[image_filename] = cached_image_path
         
         if not available_images:
             return []
