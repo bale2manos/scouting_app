@@ -937,18 +937,6 @@ def load_players_by_drive_id(team_name: str, team_slug: str, drive_id: str) -> L
         df = pd.read_excel(EXCEL_FILE)
         df = df.fillna("")
         
-        print(f"📊 Excel: {len(df)} jugadores | Equipo: {team_name} | Imágenes: {len(available_images)}")
-        print(f"📝 Columnas disponibles: {list(df.columns)}")
-        
-        # Buscar columnas relacionadas con imágenes
-        image_columns = [col for col in df.columns if 'IMAGEN' in col.upper() or 'FOTO' in col.upper() or 'PHOTO' in col.upper()]
-        print(f"🖼️ Columnas de imagen encontradas: {image_columns}")
-        
-        if image_columns:
-            for col in image_columns:
-                sample_values = df[col].dropna().head(3).tolist()
-                print(f"   {col}: ejemplos = {sample_values}")
-        
         # INVERTIR LA LÓGICA: partir de las imágenes en Drive y buscar en Excel
         players_data = []
         used_players = set()
@@ -968,10 +956,6 @@ def load_players_by_drive_id(team_name: str, team_slug: str, drive_id: str) -> L
                 full_name = row.get('JUGADOR', '')
                 if not full_name:
                     continue
-                
-                # DEBUG: Log cada jugador con GOMEZ
-                if 'GOMEZ' in image_filename.upper() and 'GOMEZ' in str(full_name).upper():
-                    print(f"\n   🔍 Comparando con Excel: {full_name}")
                 
                 # Extraer apellidos y nombre del Excel
                 if ',' in full_name:
@@ -1004,20 +988,11 @@ def load_players_by_drive_id(team_name: str, team_slug: str, drive_id: str) -> L
                 expected_pattern = f"{surnames_normalized}_{name_normalized}"
                 expected_pattern_initial = f"{surnames_normalized}_{name_normalized[0]}" if len(name_normalized) > 1 else expected_pattern
                 
-                # DEBUG: Mostrar comparación detallada
-                if 'GOMEZ' in image_filename.upper() and 'GOMEZ' in str(full_name).upper():
-                    print(f"      Apellidos: '{surnames}' → '{surnames_normalized}'")
-                    print(f"      Nombre: '{name}' → '{name_normalized}'")
-                    print(f"      Pattern: '{expected_pattern}'")
-                    print(f"      Image base: '{image_base}'")
-                    print(f"      ¿Match? {image_base == expected_pattern or image_base == expected_pattern_initial or image_base.startswith(surnames_normalized + '_')}")
-                
                 if (image_base == expected_pattern or 
                     image_base == expected_pattern_initial or
                     image_base.startswith(surnames_normalized + '_')):
                     matching_player = row
                     matching_index = idx
-                    print(f"✅ MATCH: {image_filename} → {full_name}")
                     break
             
             if matching_player is not None and matching_index is not None:
@@ -1046,19 +1021,6 @@ def load_players_by_drive_id(team_name: str, team_slug: str, drive_id: str) -> L
                 dorsal = int(matching_player['DORSAL']) if pd.notna(matching_player['DORSAL']) else 0
                 imagen_url = matching_player.get('IMAGEN', '')
                 
-                print(f"📊 DATOS EXCEL:")
-                print(f"   👤 Jugador: {full_name}")
-                print(f"   🔢 Dorsal: {dorsal}")
-                print(f"   📸 IMAGEN columna: '{imagen_url}' (tipo: {type(imagen_url)}, is_null: {pd.isna(imagen_url)})")
-                print(f"   📁 image_path local: {image_path}")
-                print(f"   🗂️ image_filename: {image_filename}")
-                
-                # Verificar todas las columnas disponibles que empiecen con IMAGEN o FOTO
-                available_cols = [col for col in matching_player.index if 'IMAGEN' in col.upper() or 'FOTO' in col.upper()]
-                print(f"   🔍 Columnas imagen disponibles: {available_cols}")
-                for col in available_cols:
-                    print(f"      {col}: '{matching_player.get(col, 'N/A')}'")
-                
                 # Crear slug único usando nombre del archivo
                 slug = image_filename.replace('.png', '').replace('.jpg', '').replace('.jpeg', '').lower()
                 
@@ -1083,8 +1045,6 @@ def load_players_by_drive_id(team_name: str, team_slug: str, drive_id: str) -> L
                 })
             else:
                 # No se encontró en Excel, crear entrada básica
-                print(f"❌ NO MATCH: {image_filename} (buscó como '{image_base}') → creando entrada básica")
-                
                 image_base_clean = image_filename.replace('.png', '').replace('.jpg', '').replace('.jpeg', '')
                 
                 if '_' in image_base_clean:
@@ -1118,7 +1078,6 @@ def load_players_by_drive_id(team_name: str, team_slug: str, drive_id: str) -> L
                     'photo_url': ''
                 })
         
-        print(f"🏁 Procesamiento completado: {len(players_data)} jugadores cargados")
         return players_data
         
     except Exception as e:
