@@ -285,11 +285,11 @@ class DriveDataLoader:
             return {}
         
         def _normalize_name(name: str) -> str:
-            """Normaliza un nombre de fichero: minusculas, sin tildes, espacios->underscore"""
+            """Normaliza un nombre de fichero: minusculas, sin tildes en vocales, mantiene ñ"""
+            # Mapeo SOLO de vocales con tilde (NO tocar Ñ ni Ç)
             mp = {
-                'Á': 'A', 'É': 'E', 'Í': 'I', 'Ó': 'O', 'Ú': 'U', 'Ü': 'U', 'Ñ': 'N',
-                'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u', 'ü': 'u', 'ñ': 'n',
-                'Ç': 'C', 'ç': 'c'
+                'Á': 'a', 'É': 'e', 'Í': 'i', 'Ó': 'o', 'Ú': 'u', 'Ü': 'u',
+                'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u', 'ü': 'u'
             }
             # Separate name and extension
             if '.' in name:
@@ -298,17 +298,19 @@ class DriveDataLoader:
             else:
                 base, ext = name, ''
 
-            # Replace characters
+            # Replace accented vowels
             for k, v in mp.items():
                 base = base.replace(k, v)
 
+            # Convert to lowercase (esto mantiene ñ como ñ)
+            base = base.lower()
+            
             # Replace spaces and multiple underscores
             base = base.replace(' ', '_').replace('-', '_')
             while '__' in base:
                 base = base.replace('__', '_')
 
-            normalized = base.lower()
-            return f"{normalized}.{ext}" if ext else normalized
+            return f"{base}.{ext}" if ext else base
 
         images: Dict[str, Path] = {}
         renamed_count = 0
@@ -473,9 +475,15 @@ def load_players() -> List[Dict[str, Any]]:
                         name = full_name[:1] if full_name else "N"
                         surnames = full_name[2:] if len(full_name) > 2 else "APELLIDOS"
                 
-                # Normalizar para comparación
-                surnames_normalized = surnames.upper().replace(' ', '_').replace('Ñ', 'N').replace(',', '')
-                name_normalized = name.upper().replace('Á', 'A').replace('É', 'E').replace('Í', 'I').replace('Ó', 'O').replace('Ú', 'U').replace('Ü', 'U')
+                # Normalizar para comparación (mantener ñ, solo quitar tildes de vocales)
+                surnames_normalized = surnames.upper().replace(' ', '_').replace(',', '')
+                # Quitar tildes de vocales pero MANTENER Ñ
+                for src, tgt in [('Á','A'),('É','E'),('Í','I'),('Ó','O'),('Ú','U'),('Ü','U')]:
+                    surnames_normalized = surnames_normalized.replace(src, tgt)
+                
+                name_normalized = name.upper()
+                for src, tgt in [('Á','A'),('É','E'),('Í','I'),('Ó','O'),('Ú','U'),('Ü','U')]:
+                    name_normalized = name_normalized.replace(src, tgt)
                 
                 # Verificar si coincide con el archivo
                 expected_pattern = f"{surnames_normalized}_{name_normalized}"
@@ -961,6 +969,10 @@ def load_players_by_drive_id(team_name: str, team_slug: str, drive_id: str) -> L
                 if not full_name:
                     continue
                 
+                # DEBUG: Log cada jugador con GOMEZ
+                if 'GOMEZ' in image_filename.upper() and 'GOMEZ' in str(full_name).upper():
+                    print(f"\n   🔍 Comparando con Excel: {full_name}")
+                
                 # Extraer apellidos y nombre del Excel
                 if ',' in full_name:
                     parts = full_name.split(',', 1)
@@ -978,13 +990,27 @@ def load_players_by_drive_id(team_name: str, team_slug: str, drive_id: str) -> L
                         name = full_name[:1] if full_name else "N"
                         surnames = full_name[2:] if len(full_name) > 2 else "APELLIDOS"
                 
-                # Normalizar para comparación
-                surnames_normalized = surnames.upper().replace(' ', '_').replace('Ñ', 'N').replace(',', '')
-                name_normalized = name.upper().replace('Á', 'A').replace('É', 'E').replace('Í', 'I').replace('Ó', 'O').replace('Ú', 'U').replace('Ü', 'U')
+                # Normalizar para comparación (mantener ñ, solo quitar tildes de vocales)
+                surnames_normalized = surnames.upper().replace(' ', '_').replace(',', '')
+                # Quitar tildes de vocales pero MANTENER Ñ
+                for src, tgt in [('Á','A'),('É','E'),('Í','I'),('Ó','O'),('Ú','U'),('Ü','U')]:
+                    surnames_normalized = surnames_normalized.replace(src, tgt)
+                
+                name_normalized = name.upper()
+                for src, tgt in [('Á','A'),('É','E'),('Í','I'),('Ó','O'),('Ú','U'),('Ü','U')]:
+                    name_normalized = name_normalized.replace(src, tgt)
                 
                 # Verificar coincidencias
                 expected_pattern = f"{surnames_normalized}_{name_normalized}"
                 expected_pattern_initial = f"{surnames_normalized}_{name_normalized[0]}" if len(name_normalized) > 1 else expected_pattern
+                
+                # DEBUG: Mostrar comparación detallada
+                if 'GOMEZ' in image_filename.upper() and 'GOMEZ' in str(full_name).upper():
+                    print(f"      Apellidos: '{surnames}' → '{surnames_normalized}'")
+                    print(f"      Nombre: '{name}' → '{name_normalized}'")
+                    print(f"      Pattern: '{expected_pattern}'")
+                    print(f"      Image base: '{image_base}'")
+                    print(f"      ¿Match? {image_base == expected_pattern or image_base == expected_pattern_initial or image_base.startswith(surnames_normalized + '_')}")
                 
                 if (image_base == expected_pattern or 
                     image_base == expected_pattern_initial or
