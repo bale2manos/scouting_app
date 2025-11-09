@@ -284,29 +284,63 @@ class DriveDataLoader:
         if not players_cache_dir.exists():
             return {}
         
-        images = {}
-        needs_cleanup = False
-        
-        for file_path in players_cache_dir.glob("*.png"):
-            filename = file_path.name
-            # Verificar si hay archivos con nombres en mayúsculas (cache obsoleto)
-            if filename != filename.lower():
-                needs_cleanup = True
-                st.warning(f"⚠️ Archivo obsoleto detectado: {filename}")
+        def _normalize_name(name: str) -> str:
+            """Normaliza un nombre de fichero: minusculas, sin tildes, espacios->underscore"""
+            mp = {
+                'Á': 'A', 'É': 'E', 'Í': 'I', 'Ó': 'O', 'Ú': 'U', 'Ü': 'U', 'Ñ': 'N',
+                'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u', 'ü': 'u', 'ñ': 'n',
+                'Ç': 'C', 'ç': 'c'
+            }
+            # Separate name and extension
+            if '.' in name:
+                base, ext = name.rsplit('.', 1)
+                ext = ext.lower()
             else:
-                images[filename] = file_path
-        
-        # Si detectamos archivos obsoletos, limpiar cache
-        if needs_cleanup:
-            st.info("🧹 Limpiando cache obsoleto...")
-            try:
-                import shutil
-                shutil.rmtree(players_cache_dir)
-                players_cache_dir.mkdir(parents=True, exist_ok=True)
-                return {}  # Forzar descarga
-            except Exception as e:
-                st.error(f"❌ Error limpiando cache: {str(e)}")
-        
+                base, ext = name, ''
+
+            # Replace characters
+            for k, v in mp.items():
+                base = base.replace(k, v)
+
+            # Replace spaces and multiple underscores
+            base = base.replace(' ', '_').replace('-', '_')
+            while '__' in base:
+                base = base.replace('__', '_')
+
+            normalized = base.lower()
+            return f"{normalized}.{ext}" if ext else normalized
+
+        images: Dict[str, Path] = {}
+        renamed_count = 0
+
+        # Consider png, jpg, jpeg
+        for pattern in ('*.png', '*.jpg', '*.jpeg'):
+            for file_path in players_cache_dir.glob(pattern):
+                filename = file_path.name
+                normalized = _normalize_name(filename)
+
+                # If normalized name differs, try to rename (safe)
+                if normalized != filename:
+                    target_path = players_cache_dir / normalized
+                    try:
+                        # If target exists, skip rename to avoid overwrite
+                        if not target_path.exists():
+                            file_path.rename(target_path)
+                            file_path = target_path
+                            renamed_count += 1
+                        else:
+                            # prefer existing normalized file
+                            file_path.unlink()
+                            file_path = target_path
+                    except Exception:
+                        # If rename fails, keep original
+                        pass
+
+                images[file_path.name] = file_path
+
+        if renamed_count > 0:
+            st.info(f"🧹 {renamed_count} archivo(s) obsoleto(s) renombrado(s) en caché")
+
         return images
     
     def clear_cache(self) -> bool:
