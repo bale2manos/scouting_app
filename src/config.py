@@ -9,8 +9,8 @@ from pathlib import Path
 # ======= CONFIG BÁSICA ========
 # ==============================
 
-TEAM_NAME_DISPLAY = "CB TRES CANTOS"   # texto visible
-TEAM_SLUG = "cb_tres_cantos"           # para rutas (minúsculas + _)
+TEAM_NAME_DISPLAY = "BALONCESTO TELDE"   # texto visible
+TEAM_SLUG = "baloncesto_telde"           # para rutas (minúsculas + _)
 
 
 # ==============================
@@ -18,9 +18,9 @@ TEAM_SLUG = "cb_tres_cantos"           # para rutas (minúsculas + _)
 # ==============================
 
 # Variables configurables para la página de inicio
-NEXT_MATCH_DATE = "15/11/2024"  # Fecha del próximo partido (formato DD/MM/YYYY)
-LEAGUE_POSITION = "1º"          # Posición en la liga
-WINS_LOSSES = "5-1"           # Victorias-Derrotas
+NEXT_MATCH_DATE = "22/11/2024"  # Fecha del próximo partido (formato DD/MM/YYYY)
+LEAGUE_POSITION = "10º"          # Posición en la liga
+WINS_LOSSES = "3-3"           # Victorias-Derrotas
 
 
 # ==============================
