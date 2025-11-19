@@ -226,7 +226,7 @@ class Authenticator:
         with st.form("login_form"):
             username = st.text_input("👤 Usuario", placeholder="Ingresa tu nombre de usuario")
             password = st.text_input("🔒 Contraseña", type="password", placeholder="Ingresa tu contraseña")
-            submit_button = st.form_submit_button("🚀 Ingresar", use_container_width=True)
+            submit_button = st.form_submit_button("🚀 Ingresar", width="stretch")
             
             if submit_button:
                 if username and password:

@@ -62,7 +62,7 @@ def view_admin():
     col1, col2 = st.columns(2)
     
     with col1:
-        if st.button("🔄 Sincronizar datos", use_container_width=True, help="Descargar archivos desde Google Drive"):
+        if st.button("🔄 Sincronizar datos", width="stretch", help="Descargar archivos desde Google Drive"):
             if not drive_status['authenticated']:
                 st.error("❌ Google Drive no está autenticado")
             else:
@@ -74,7 +74,7 @@ def view_admin():
                     st.error("❌ Error en la sincronización")
     
     with col2:
-        if st.button("🔄 Forzar actualización", use_container_width=True, help="Forzar descarga completa"):
+        if st.button("🔄 Forzar actualización", width="stretch", help="Forzar descarga completa"):
             if not drive_status['authenticated']:
                 st.error("❌ Google Drive no está autenticado")
             else:
@@ -97,8 +97,8 @@ def view_admin():
         st.info("**Cache local:** Archivos descargados desde Google Drive se guardan localmente para acceso rápido.")
     
     with col2:
-        if st.button("🗑️ Limpiar cache", use_container_width=True, help="Eliminar archivos descargados"):
-            if st.button("✅ Confirmar limpieza", use_container_width=True):
+        if st.button("🗑️ Limpiar cache", width="stretch", help="Eliminar archivos descargados"):
+            if st.button("✅ Confirmar limpieza", width="stretch"):
                 if clear_drive_cache():
                     st.success("✅ Cache limpiado correctamente")
                     st.rerun()
@@ -117,11 +117,11 @@ def view_admin():
     
     col1, col2 = st.columns(2)
     with col1:
-        if st.button("👥 Ver jugadores", use_container_width=True):
+        if st.button("👥 Ver jugadores", width="stretch"):
             set_route("players")
     
     with col2:
-        if st.button("📄 Ver informe equipo", use_container_width=True):
+        if st.button("📄 Ver informe equipo", width="stretch"):
             set_route("equipo_informe")
 
 
@@ -160,7 +160,7 @@ def _show_admin_header():
     col1, col2, col3 = st.columns([2, 6, 2])
     
     with col1:
-        if st.button("🏠 Volver a Home", use_container_width=True):
+        if st.button("🏠 Volver a Home", width="stretch"):
             set_route("home")
             st.rerun()
     
@@ -169,7 +169,7 @@ def _show_admin_header():
                    unsafe_allow_html=True)
     
     with col3:
-        if st.button("🔄 Actualizar", use_container_width=True):
+        if st.button("🔄 Actualizar", width="stretch"):
             st.rerun()
     
     st.markdown("---")
@@ -221,7 +221,7 @@ def _show_users_list():
     # Mostrar tabla con configuración
     st.dataframe(
         df_users,
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
         column_config={
             "👤 Usuario": st.column_config.TextColumn("👤 Usuario", width="medium"),
@@ -430,7 +430,7 @@ def _show_user_history():
         df_logs = pd.DataFrame(logs_data)
         st.dataframe(
             df_logs,
-            use_container_width=True,
+            width="stretch",
             hide_index=True
         )
     else:
@@ -614,7 +614,7 @@ def _show_video_stats():
                         df_videos = pd.DataFrame(video_data)
                         st.dataframe(
                             df_videos,
-                            use_container_width=True,
+                            width="stretch",
                             hide_index=True
                         )
                 else:
@@ -692,7 +692,7 @@ def _show_video_stats():
                     
                     st.dataframe(
                         filtered_df,
-                        use_container_width=True,
+                        width="stretch",
                         hide_index=True,
                         column_config={
                             "👤 Jugador": st.column_config.TextColumn("👤 Jugador", width="medium"),

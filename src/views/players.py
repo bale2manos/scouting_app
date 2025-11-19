@@ -184,7 +184,7 @@ def view_players():
         with col1:
             st.info(f"👥 Mostrando jugadores de: **{team_name}**")
         with col2:
-            if st.button("📋 Clasificar Jugadores", use_container_width=True):
+            if st.button("📋 Clasificar Jugadores", width="stretch"):
                 st.session_state['show_classification_dialog'] = True
         
         # Mostrar diálogo de clasificación
@@ -262,7 +262,7 @@ def _render_player_grid(players: list, cols_per_row: int, prefix: str):
                     # 1. Intentar imagen URL del Excel
                     if p.get('image_url'):
                         try:
-                            st.image(p['image_url'], use_container_width=True)
+                            st.image(p['image_url'], width="stretch")
                             image_displayed = True
                         except:
                             pass  # Si falla la URL, continuar al fallback
@@ -270,7 +270,7 @@ def _render_player_grid(players: list, cols_per_row: int, prefix: str):
                     # 2. Fallback a imagen genérica local
                     if not image_displayed:
                         if GENERIC_USER_IMAGE.exists():
-                            st.image(str(GENERIC_USER_IMAGE), use_container_width=True)
+                            st.image(str(GENERIC_USER_IMAGE), width="stretch")
                         else:
                             st.markdown("🏀", help="Imagen no disponible")
                     
@@ -281,7 +281,7 @@ def _render_player_grid(players: list, cols_per_row: int, prefix: str):
                         label=player_name,
                         key=f"player_btn_{prefix}_{player_slug}_{row_num}_{col_idx}",
                         help=f"Ver informe de {player_name}",
-                        use_container_width=True
+                        width="stretch"
                     ):
                         set_route("jugador_informe", selected_player=player_slug)
 
@@ -361,7 +361,7 @@ def _show_classification_dialog(team_slug: str, players: list):
         col1, col2, col3 = st.columns([1, 1, 1])
         
         with col1:
-            if st.button("✅ Guardar cambios", type="primary", use_container_width=True):
+            if st.button("✅ Guardar cambios", type="primary", width="stretch"):
                 # Guardar clasificaciones
                 success = classification_manager.set_multiple_classifications(
                     team_slug,
@@ -378,7 +378,7 @@ def _show_classification_dialog(team_slug: str, players: list):
                     st.error("❌ Error al guardar las clasificaciones")
         
         with col2:
-            if st.button("🔄 Restaurar", use_container_width=True):
+            if st.button("🔄 Restaurar", width="stretch"):
                 # Restaurar a valores guardados
                 st.session_state.temp_classifications = {}
                 for player in players:
@@ -388,7 +388,7 @@ def _show_classification_dialog(team_slug: str, players: list):
                 st.rerun()
         
         with col3:
-            if st.button("❌ Cancelar", use_container_width=True):
+            if st.button("❌ Cancelar", width="stretch"):
                 # Limpiar estado temporal y cerrar
                 if 'temp_classifications' in st.session_state:
                     del st.session_state.temp_classifications

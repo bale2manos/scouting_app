@@ -326,13 +326,13 @@ def view_teams():
                 # Botones inmediatamente debajo de esta tarjeta
                 col_informe, col_jugadores = st.columns(2)
                 with col_informe:
-                    if st.button("📄 Informe", key=f"informe_{team['slug']}", use_container_width=True, type="primary"):
+                    if st.button("📄 Informe", key=f"informe_{team['slug']}", width="stretch", type="primary"):
                         st.session_state["selected_team"] = team
                         set_route("team")
                         st.rerun()
                 
                 with col_jugadores:
-                    if st.button("👥 Jugadores", key=f"jugadores_{team['slug']}", use_container_width=True):
+                    if st.button("👥 Jugadores", key=f"jugadores_{team['slug']}", width="stretch"):
                         st.session_state["selected_team"] = team
                         set_route("players")
                         st.rerun()

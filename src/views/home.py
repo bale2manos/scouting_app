@@ -141,7 +141,7 @@ def view_home():
     col1, col2 = st.columns(2)
     
     with col1:
-        if st.button("📄 Ver Informe del Equipo", use_container_width=True, type="primary"):
+        if st.button("📄 Ver Informe del Equipo", width="stretch", type="primary"):
             # Buscar el drive_id específico del equipo principal
             from ..utils.google_drive import get_drive_client
             from ..config import GOOGLE_DRIVE_ROOT_FOLDER_ID
@@ -166,7 +166,7 @@ def view_home():
             set_route("team")
     
     with col2:
-        if st.button("👥 Ver Jugadores", use_container_width=True):
+        if st.button("👥 Ver Jugadores", width="stretch"):
             # Buscar el drive_id específico del equipo principal
             from ..utils.google_drive import get_drive_client
             from ..config import GOOGLE_DRIVE_ROOT_FOLDER_ID

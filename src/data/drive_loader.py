@@ -305,6 +305,11 @@ class DriveDataLoader:
             # Convert to lowercase (esto mantiene ñ como ñ)
             base = base.lower()
             
+            # Limpiar prefijos numéricos extraños al inicio (ej: 10221fespino → espino)
+            # Solo si empieza con dígitos seguidos de una letra minúscula
+            import re
+            base = re.sub(r'^\d+[a-z](?=[a-z_])', '', base)
+            
             # Replace spaces and multiple underscores
             base = base.replace(' ', '_').replace('-', '_')
             while '__' in base:
@@ -334,11 +339,28 @@ class DriveDataLoader:
                             # prefer existing normalized file
                             file_path.unlink()
                             file_path = target_path
-                    except Exception:
-                        # If rename fails, keep original
-                        pass
+                    except Exception as e:
+                        # If rename fails, try to force rename
+                        print(f"⚠️ Error renombrando {filename} → {normalized}: {e}")
+                        # Try to create normalized version and delete original
+                        try:
+                            import shutil
+                            shutil.copy2(file_path, target_path)
+                            file_path.unlink()
+                            file_path = target_path
+                            renamed_count += 1
+                        except Exception as e2:
+                            print(f"⚠️ Error forzando renombrado: {e2}")
+                            # Keep original if all fails
+                            pass
 
-                images[file_path.name] = file_path
+                # Always use normalized name in dictionary
+                final_name = _normalize_name(file_path.name)
+                final_path = players_cache_dir / final_name
+                if final_path.exists():
+                    images[final_name] = final_path
+                else:
+                    images[file_path.name] = file_path
 
         if renamed_count > 0:
             st.info(f"🧹 {renamed_count} archivo(s) obsoleto(s) renombrado(s) en caché")
@@ -942,8 +964,16 @@ def load_players_by_drive_id(team_name: str, team_slug: str, drive_id: str) -> L
         used_players = set()
         
         for image_filename, image_path in available_images.items():
-            # Extraer información del nombre del archivo
-            image_base = image_filename.replace('.png', '').replace('.jpg', '').replace('.jpeg', '').upper()
+            # Extraer información del nombre del archivo y normalizar (quitar tildes)
+            image_base = image_filename.replace('.png', '').replace('.jpg', '').replace('.jpeg', '')
+            
+            # Quitar tildes antes de convertir a mayúsculas para matching
+            tilde_map = {'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u', 'ü': 'u',
+                        'Á': 'A', 'É': 'E', 'Í': 'I', 'Ó': 'O', 'Ú': 'U', 'Ü': 'U'}
+            for src, tgt in tilde_map.items():
+                image_base = image_base.replace(src, tgt)
+            
+            image_base = image_base.upper()
             
             # Buscar coincidencia en el Excel (buscar en cualquier equipo, no solo el actual)
             matching_player = None
@@ -1045,6 +1075,42 @@ def load_players_by_drive_id(team_name: str, team_slug: str, drive_id: str) -> L
                 })
             else:
                 # No se encontró en Excel, crear entrada básica
+                print(f"\n❌ NO MATCH para archivo: {image_filename}")
+                print(f"   📄 Nombre archivo original: {image_filename}")
+                print(f"   🔤 Image base (uppercase): '{image_base}'")
+                print(f"   🔍 Buscando coincidencias en Excel para equipo: {team_name}")
+                
+                # Buscar jugadores similares en el Excel del equipo actual
+                team_players_in_excel = df[df['EQUIPO'].str.contains(team_name, na=False, case=False)]
+                print(f"   👥 Jugadores encontrados en Excel para '{team_name}': {len(team_players_in_excel)}")
+                
+                if len(team_players_in_excel) > 0:
+                    print(f"   📋 TODOS los jugadores del equipo en Excel:")
+                    for idx, row in team_players_in_excel.iterrows():
+                        jugador_name = row.get('JUGADOR', 'N/A')
+                        # Mostrar cómo se normalizaría
+                        if ',' in jugador_name:
+                            parts = jugador_name.split(',', 1)
+                            surnames = parts[0].strip()
+                            name = parts[1].strip() if len(parts) > 1 else ""
+                            name_full = name  # Guardar nombre completo
+                            name = name.split()[0] if name else "N"
+                            surnames_norm = surnames.upper().replace(' ', '_')
+                            for src, tgt in [('Á','A'),('É','E'),('Í','I'),('Ó','O'),('Ú','U'),('Ü','U')]:
+                                surnames_norm = surnames_norm.replace(src, tgt)
+                            name_norm = name.upper()
+                            for src, tgt in [('Á','A'),('É','E'),('Í','I'),('Ó','O'),('Ú','U'),('Ü','U')]:
+                                name_norm = name_norm.replace(src, tgt)
+                            # También mostrar pattern con nombre completo
+                            name_full_norm = name_full.upper().replace(' ', '_')
+                            for src, tgt in [('Á','A'),('É','E'),('Í','I'),('Ó','O'),('Ú','U'),('Ü','U')]:
+                                name_full_norm = name_full_norm.replace(src, tgt)
+                            pattern = f"{surnames_norm}_{name_norm}"
+                            pattern_full = f"{surnames_norm}_{name_full_norm}"
+                            print(f"      - {jugador_name}")
+                            print(f"        → Pattern inicial: '{pattern}'")
+                            print(f"        → Pattern completo: '{pattern_full}'")
+                
                 image_base_clean = image_filename.replace('.png', '').replace('.jpg', '').replace('.jpeg', '')
                 
                 if '_' in image_base_clean:

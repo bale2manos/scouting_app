@@ -25,7 +25,7 @@ class StatsManager:
         col1, col2, col3 = st.columns([2, 6, 2])
         
         with col1:
-            if st.button("🏠 Volver a Home", use_container_width=True):
+            if st.button("🏠 Volver a Home", width="stretch"):
                 set_route("home")
                 st.rerun()
         
@@ -34,7 +34,7 @@ class StatsManager:
                        unsafe_allow_html=True)
         
         with col3:
-            if st.button("🔄 Actualizar", use_container_width=True):
+            if st.button("🔄 Actualizar", width="stretch"):
                 st.rerun()
         
         st.markdown("---")
@@ -260,7 +260,7 @@ class StatsManager:
             
             st.dataframe(
                 display_df,
-                use_container_width=True,
+                width="stretch",
                 hide_index=True
             )
         else:
@@ -319,7 +319,7 @@ class StatsManager:
                     # Mostrar tabla
                     st.dataframe(
                         df_users,
-                        use_container_width=True,
+                        width="stretch",
                         hide_index=True
                     )
                 else:
@@ -510,7 +510,7 @@ class StatsManager:
                     
                     st.dataframe(
                         display_df,
-                        use_container_width=True,
+                        width="stretch",
                         hide_index=True
                     )
                 else:

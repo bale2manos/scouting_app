@@ -100,7 +100,7 @@ def view_team():
         # Botón VER INFORME
         if st.button("📄 VER INFORME", 
                     help="Análisis completo del equipo", 
-                    use_container_width=True, 
+                    width="stretch", 
                     type="primary"):
             # Registrar que se está viendo el informe del equipo
             auth.log_report_view("team", team_name)
@@ -115,7 +115,7 @@ def view_team():
         
         if st.button("🎥 VER VIDEOS DEL EQUIPO", 
                     help="Videos de análisis del equipo" if has_team_videos else "No hay videos disponibles", 
-                    use_container_width=True,
+                    width="stretch",
                     disabled=not has_team_videos):
             if has_team_videos:
                 # Configurar contexto para mostrar videos del equipo
@@ -130,7 +130,7 @@ def view_team():
         # Botón VER JUGADORES
         if st.button("� VER JUGADORES", 
                     help="Ver jugadores del equipo", 
-                    use_container_width=True):
+                    width="stretch"):
             # Registrar que se están viendo los jugadores del equipo
             auth.log_report_view("team", f"{team_name} - Jugadores")
             set_route("players")

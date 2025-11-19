@@ -71,10 +71,10 @@ def view_equipo_informe():
             # Botones de navegación
             col1, col2 = st.columns(2)
             with col1:
-                if st.button("👥 Ver jugadores del equipo", use_container_width=True, type="primary"):
+                if st.button("👥 Ver jugadores del equipo", width="stretch", type="primary"):
                     set_route("players")
             with col2:
-                if st.button("🔙 Volver a equipos", use_container_width=True):
+                if st.button("🔙 Volver a equipos", width="stretch"):
                     set_route("teams")
                 
     else:
@@ -85,7 +85,7 @@ def view_equipo_informe():
         if not team_report_path:
             st.error("📄 Informe del equipo no disponible")
             
-            if st.button("👥 Ver jugadores disponibles", use_container_width=True):
+            if st.button("👥 Ver jugadores disponibles", width="stretch"):
                 set_route("players")
             
             return
@@ -192,7 +192,7 @@ def view_jugador_informe():
                 data=informe_png_path.read_bytes(),
                 file_name=f"informe_{player_slug}.png",
                 mime="image/png",
-                use_container_width=True,
+                width="stretch",
                 type="primary",
                 key=f"download_player_{player_slug}"
             )
@@ -202,7 +202,7 @@ def view_jugador_informe():
                 auth.log_report_download("player", player_name)
                     
         else:
-            st.button("📄 Descargar informe", use_container_width=True, disabled=True, help="Informe no disponible")
+            st.button("📄 Descargar informe", width="stretch", disabled=True, help="Informe no disponible")
     
     with col2:
         # Botón Ver Videos del jugador rival
@@ -251,7 +251,7 @@ def view_jugador_informe():
             player_video = video_manager.get_player_video(team_name, lookup_name)
             has_player_video = player_video is not None
         if st.button("🎬 Ver vídeos", 
-                    use_container_width=True, 
+                    width="stretch", 
                     disabled=not has_player_video,
                     help="Video de análisis del jugador" if has_player_video else "No hay videos disponibles"):
             if has_player_video:
@@ -272,7 +272,7 @@ def view_jugador_informe():
     # Intentar cargar la imagen del informe
     if informe_png_path and informe_png_path.exists():
         try:
-            st.image(str(informe_png_path), use_container_width=True)
+            st.image(str(informe_png_path), width="stretch")
             image_to_download = informe_png_path
         except Exception as e:
             # Usar imagen genérica como fallback
@@ -296,7 +296,7 @@ def _show_generic_image():
     """Muestra la imagen genérica de usuario con manejo robusto de errores"""
     if GENERIC_USER_IMAGE.exists():
         try:
-            st.image(str(GENERIC_USER_IMAGE), use_container_width=True)
+            st.image(str(GENERIC_USER_IMAGE), width="stretch")
             return True
         except Exception as e:
             st.info("El informe visual no está disponible en este momento.")

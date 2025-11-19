@@ -320,7 +320,7 @@ def view_log_videos():
     current_user = auth.get_current_user()
     if not current_user or current_user.get('role') not in ['admin', 'coach']:
         st.error("❌ No tienes permisos para acceder a esta vista")
-        if st.button("← Volver", use_container_width=True):
+        if st.button("← Volver", width="stretch"):
             set_route("home")
         return
 
@@ -332,7 +332,7 @@ def view_log_videos():
 
             if not players_activity:
                 st.warning("No se encontraron jugadores en el sistema")
-                if st.button("← Volver", use_container_width=True):
+                if st.button("← Volver", width="stretch"):
                     set_route("home")
                 return
 
@@ -478,7 +478,7 @@ def view_log_videos():
                 # Mostrar tabla
                 st.dataframe(
                     filtered_df,
-                    use_container_width=True,
+                    width="stretch",
                     hide_index=True,
                     column_config={
                         "👤 Jugador": st.column_config.TextColumn("👤 Jugador", width="medium"),
@@ -492,7 +492,7 @@ def view_log_videos():
 
             # Botón de volver
             st.markdown("---")
-            if st.button("← Volver al Inicio", use_container_width=True):
+            if st.button("← Volver al Inicio", width="stretch"):
                 set_route("home")
 
         except Exception as e:
@@ -500,7 +500,7 @@ def view_log_videos():
             import traceback
             with st.expander("Detalles del error"):
                 st.code(traceback.format_exc())
-            if st.button("← Volver", use_container_width=True):
+            if st.button("← Volver", width="stretch"):
                 set_route("home")
 
 

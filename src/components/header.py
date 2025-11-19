@@ -14,7 +14,7 @@ def header_bar():
         home_col, back_col = st.columns([1, 1])
         
         with home_col:
-            if st.button("🏠 Home", use_container_width=True, key="header_home"):
+            if st.button("🏠 Home", width="stretch", key="header_home"):
                 set_route("home")
                 st.rerun()
         
@@ -34,12 +34,12 @@ def header_bar():
                 user_name = current_user.get('full_name', current_user['username'])
                 role_icon = "👨‍💼" if current_user.get('role') == 'admin' else "👤"
                 
-                if st.button(f"{role_icon} {user_name}", use_container_width=True, key="header_user"):
+                if st.button(f"{role_icon} {user_name}", width="stretch", key="header_user"):
                     st.session_state['show_user_menu'] = not st.session_state.get('show_user_menu', False)
                     st.rerun()
             
             with col2:
-                if st.button("📚 Equipos", use_container_width=True, key="header_teams"):
+                if st.button("📚 Equipos", width="stretch", key="header_teams"):
                     set_route("teams")
                     st.rerun()
         
@@ -54,7 +54,7 @@ def show_user_menu(auth, current_user):
         
         # Solo admins ven estadísticas en su propia fila
         if current_user.get('role') == 'admin':
-            if st.button("📊 Estadísticas", use_container_width=True, key="menu_stats"):
+            if st.button("📊 Estadísticas", width="stretch", key="menu_stats"):
                 set_route("stats")
                 st.session_state['show_user_menu'] = False
                 st.rerun()
@@ -69,13 +69,13 @@ def show_user_menu(auth, current_user):
             
             if user_role in ['admin', 'coach']:
                 # Para admins y coaches: mostrar botón "Log Videos"
-                if st.button("📊 Log Videos", use_container_width=True, key="menu_log_videos"):
+                if st.button("📊 Log Videos", width="stretch", key="menu_log_videos"):
                     set_route("log_videos")
                     st.session_state['show_user_menu'] = False
                     st.rerun()
             else:
                 # Botón estándar para jugadores
-                if st.button("🎥 Mis Videos", use_container_width=True, key="menu_my_videos"):
+                if st.button("🎥 Mis Videos", width="stretch", key="menu_my_videos"):
                     # Configurar contexto para mostrar videos del usuario
                     st.session_state['video_context'] = {
                         'type': 'user',
@@ -86,7 +86,7 @@ def show_user_menu(auth, current_user):
                     st.rerun()
         
         with col2:
-            if st.button("🚪 Logout", use_container_width=True, key="menu_logout"):
+            if st.button("🚪 Logout", width="stretch", key="menu_logout"):
                 auth.logout()
                 st.session_state['show_user_menu'] = False
                 st.rerun()

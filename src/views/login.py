@@ -70,7 +70,7 @@ def show_login_required():
     - 📞 Contacta al administrador si necesitas una cuenta
     """)
     
-    if st.button("🔐 Ir al Login", use_container_width=True):
+    if st.button("🔐 Ir al Login", width="stretch"):
         st.switch_page("src/views/login.py")
 
 
